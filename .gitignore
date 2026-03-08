@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.mcp.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Project outputs
+out/
+prompts/niches.json
+prompts/tasks.jsonl
+*.db
+
+# Node (template)
+templates/*/node_modules/
+templates/*/.next/
+templates/*/out/
+
+# Logs
+*.log
+
+# Local-only / internal artifacts (do not publish)
+.context/
+.handoff/
+.packets/
+private/
+prompts/codex_context/
+context-dump/
+debug-context/
+benchmark-results/
+prompts/codex_creativity_debug.md
+config/*.bak_*
+*.bak_*
+*.head_backup_*
+artifacts/github_traffic/
