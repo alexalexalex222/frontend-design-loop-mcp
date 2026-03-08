@@ -30,6 +30,7 @@ High-level signature:
 What it is for:
 - push a page beyond “works” into “looks deliberate”
 - run screenshot-grounded design passes without making you hand-wire all the creative defaults every time
+- start from a rough page, weak section, or base-model first pass and move it into a stronger visual class
 
 Default behavior:
 - `solver_mode="host_cli"`
@@ -45,8 +46,8 @@ Key inputs:
 - `preview_command`
 - `preview_url`
 - main `provider` + `model`
-- optional split-lane overrides for `planner_provider` / `planner_model`
-- optional split-lane overrides for `vision_provider` / `vision_model`
+- optional explicit split overrides for `planner_provider` / `planner_model`
+- optional explicit split overrides for `vision_provider` / `vision_model`
 - optional `section_creativity_model`
 
 Behavior:
@@ -137,6 +138,13 @@ If you are in Claude Code, Codex, Gemini CLI, Droid, or OpenCode interactively:
 
 ## Install
 
+### Public install right now
+
+```bash
+pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
+frontend-design-loop-setup --install-all-detected-clients
+```
+
 ### Local clone
 
 ```bash
@@ -151,31 +159,29 @@ This is the easiest repo-checkout path. It:
 - runs the built-in doctor
 - runs the stdio smoke test
 
-### Packaged install
+### Future PyPI install
+
+PyPI is not live yet. When it is published, the public install should become:
 
 ```bash
-pipx install /path/to/frontend-design-loop-mcp
+pipx install frontend-design-loop-mcp
 frontend-design-loop-setup --install-all-detected-clients
-```
-
-Manual config helpers:
-
-```bash
-frontend-design-loop-setup --install-all-detected-clients
-frontend-design-loop-setup --print-claude-config
-frontend-design-loop-setup --print-codex-config
-frontend-design-loop-setup --print-gemini-config
-frontend-design-loop-setup --print-droid-config
-frontend-design-loop-setup --print-opencode-config
-frontend-design-loop-setup --install-codex
-frontend-design-loop-setup --install-gemini
-frontend-design-loop-setup --install-droid
-frontend-design-loop-setup --install-opencode
-frontend-design-loop-setup --doctor
-frontend-design-loop-setup --doctor --smoke
 ```
 
 ## MCP config
+
+Packaged install example:
+
+```json
+{
+  "mcpServers": {
+    "frontend-design-loop-mcp": {
+      "command": "frontend-design-loop-mcp",
+      "args": []
+    }
+  }
+}
+```
 
 Local clone example:
 
@@ -193,49 +199,23 @@ Local clone example:
 }
 ```
 
-Packaged install example:
-
-```json
-{
-  "mcpServers": {
-    "frontend-design-loop-mcp": {
-      "command": "frontend-design-loop-mcp",
-      "args": []
-    }
-  }
-}
-```
-
-Codex install helper:
+## Setup helpers
 
 ```bash
+frontend-design-loop-setup --install-all-detected-clients
+frontend-design-loop-setup --print-claude-config
+frontend-design-loop-setup --print-codex-config
+frontend-design-loop-setup --print-gemini-config
+frontend-design-loop-setup --print-droid-config
+frontend-design-loop-setup --print-opencode-config
+frontend-design-loop-setup --install-claude --scope user
 frontend-design-loop-setup --install-codex
-```
-
-Gemini install helper:
-
-```bash
 frontend-design-loop-setup --install-gemini
-```
-
-Droid install helper:
-
-```bash
 frontend-design-loop-setup --install-droid
-```
-
-OpenCode install helper:
-
-```bash
 frontend-design-loop-setup --install-opencode
+frontend-design-loop-setup --doctor
+frontend-design-loop-setup --doctor --smoke
 ```
-
-## Environment variables
-
-Preferred:
-- `FRONTEND_DESIGN_LOOP_CONFIG_PATH`
-- `FRONTEND_DESIGN_LOOP_MCP_OUT_DIR`
-- `FRONTEND_DESIGN_LOOP_MCP_PORT_START`
 
 ## Verification commands
 
