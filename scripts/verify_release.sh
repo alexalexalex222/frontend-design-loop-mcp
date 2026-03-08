@@ -59,6 +59,10 @@ if [ -z "$PYTHON_BIN" ]; then
   fi
 fi
 
+if [ ! -x "$PYTHON_BIN" ] && command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+  PYTHON_BIN="$(command -v "$PYTHON_BIN")"
+fi
+
 if [ ! -x "$PYTHON_BIN" ]; then
   echo "Python interpreter is not executable: $PYTHON_BIN" >&2
   exit 1
