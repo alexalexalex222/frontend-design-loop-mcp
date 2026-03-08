@@ -5,6 +5,7 @@ Use this file as the source of truth for listing `frontend-design-loop-mcp` on M
 ## Canonical Repo
 
 - Repo: `https://github.com/alexalexalex222/frontend-design-loop-mcp`
+- Official registry metadata source: tracked in `server.json` at the repo root
 - Current public install:
 
 ```bash

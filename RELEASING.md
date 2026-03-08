@@ -29,6 +29,12 @@ If you need the CI-safe variant that skips the live GitHub install check:
 ./scripts/verify_release.sh --skip-github-install
 ```
 
+Registry metadata consistency is now part of the local release path via:
+
+```bash
+python3 scripts/check_registry_ready.py
+```
+
 ## Manual package smoke (if you need to inspect by hand)
 
 ```bash
@@ -72,4 +78,16 @@ frontend-design-loop-setup --doctor --smoke
 
 6. update public docs so the GitHub install fallback becomes secondary instead of primary
 7. refresh MCP directory submissions with the live PyPI command
-8. only add official-registry `server.json` metadata after PyPI is live and the repo README has the required MCP name marker
+8. after PyPI is live, verify the registry metadata against the live package:
+
+```bash
+python3 scripts/check_registry_ready.py --check-pypi
+```
+
+9. publish the official MCP Registry entry from the tracked metadata:
+
+```bash
+mcp-publisher publish server.json
+```
+
+10. once the official registry entry is live, refresh any stale third-party directory listings only if they still point at the wrong repo

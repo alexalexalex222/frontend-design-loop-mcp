@@ -98,6 +98,7 @@ run_repo_check() {
 run_repo_check "pytest" env PYTHONPATH=src "$PYTHON_BIN" -m pytest -q --import-mode=importlib
 run_repo_check "offline preflight" env PYTHONPATH=src "$PYTHON_BIN" scripts/preflight_check.py
 run_repo_check "stdio smoke" env PYTHONPATH=src "$PYTHON_BIN" scripts/smoke_mcp_stdio.py
+run_repo_check "registry metadata check" "$PYTHON_BIN" scripts/check_registry_ready.py
 run_repo_check "build" "$PYTHON_BIN" -m build --outdir dist
 run_repo_check "twine check" "$PYTHON_BIN" -m twine check "$WHEEL_PATH" "$SDIST_PATH"
 

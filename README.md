@@ -1,5 +1,7 @@
 # Frontend Design Loop MCP
 
+<!-- mcp-name: io.github.alexalexalex222/frontend-design-loop-mcp -->
+
 Coding agents can get a page functional. Frontend Design Loop makes it materially better with screenshot-grounded iteration and proof artifacts.
 
 Use it when the base model got the page working but the result is still generic, flat, rough, or visibly under-designed. The main design workflow stays on one main provider and model lane by default, so multi-model routing is opt-in instead of the default story.
@@ -47,6 +49,9 @@ This is the wedge:
 - coding agents can already get pages working
 - this MCP helps them make pages materially better
 - screenshot-grounded iteration plus proof artifacts is the differentiator
+
+Official MCP Registry metadata is tracked in [`server.json`](server.json).
+Actual registry publication stays gated behind a live PyPI package.
 
 ## Whole-Page Proof
 
