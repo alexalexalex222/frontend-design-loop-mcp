@@ -1,6 +1,6 @@
 """Frontend Design Loop MCP setup helper.
 
-This exists to make `pipx install frontend-design-loop-mcp` feel product-like:
+This exists to make public packaged installs feel product-like:
 users can run a single command to install the required Playwright browser
 binaries and wire the MCP into supported coding clients.
 
