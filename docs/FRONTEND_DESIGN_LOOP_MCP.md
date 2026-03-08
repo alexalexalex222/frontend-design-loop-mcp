@@ -1,15 +1,78 @@
 # Frontend Design Loop MCP
 
-## Recommended contract
+Frontend Design Loop is an MCP for coding agents that already got a page functional and now need to make it materially better with screenshot-grounded iteration and proof artifacts.
 
-Use `frontend_design_loop_design` when you want the MCP to actively improve the UI.
-Use `frontend_design_loop_eval` when you already have the patch and want proof.
+## Product Contract
 
-Interactive split:
-- `frontend_design_loop_design`: design-enhancement workflow
-- `frontend_design_loop_eval`: verification workflow
+- `frontend_design_loop_design` is the primary workflow
+- `frontend_design_loop_eval` is the proof workflow for host-authored patches
+- `frontend_design_loop_design` stays on one main `provider` + `model` lane by default
+- planner, design generation, vision, and section-creativity inherit that same lane unless the caller explicitly overrides them
+- split-lane routing is opt-in only
+- `frontend_design_loop_solve` remains available for advanced unattended workflows, but it is not the default public story
 
-Frontend Design Loop returns:
+## Real Call Example
+
+```text
+frontend_design_loop_design(
+  repo_path="/absolute/path/to/site",
+  goal="make the homepage look materially more premium without changing the information architecture",
+  provider="gemini_cli",
+  model="gemini-3.1-pro-preview",
+  preview_command="python3 -m http.server {port}",
+  preview_url="http://127.0.0.1:{port}/index.html"
+)
+```
+
+## `frontend_design_loop_design`
+
+Use this when the host agent wants the MCP to improve the page, not just judge it.
+
+Typical use cases:
+- the page works but still looks generic
+- a section is structurally correct but visually weak
+- a rough first pass needs a real design loop against screenshots
+
+Required inputs:
+- `repo_path`
+- `goal`
+- `preview_command`
+- `preview_url`
+- main `provider` + `model`
+
+Default behavior:
+- `solver_mode="host_cli"`
+- `planning_mode="single"`
+- `vision_mode="on"`
+- `section_creativity_mode="on"`
+- one main `provider` + `model` lane by default
+
+What it returns:
+- the winning patch
+- screenshot artifacts
+- run directories and machine-readable proof output
+
+## `frontend_design_loop_eval`
+
+Use this when the host agent already has the patch and wants proof.
+
+Typical use cases:
+- verify a host-authored patch in an isolated worktree
+- capture screenshots for host review
+- run deterministic checks before deciding whether the patch is acceptable
+
+Key inputs:
+- `repo_path`
+- `patches`
+- optional `goal`
+- optional `test_command`
+- optional `lint_command`
+- optional `preview_command` and `preview_url`
+- `vision_provider=client` by default
+- `unsafe_shell_commands=false` by default
+- `unsafe_external_preview=false` by default
+
+Returned fields include:
 - `deterministic_passed`
 - `vision_pending`
 - `vision_scored`
@@ -19,126 +82,64 @@ Frontend Design Loop returns:
 - `screenshot_files`
 - `patch`
 
-`passes_all_gates` is only true when automated vision actually ran and passed.
+## How The MCP Works In Practice
 
-## Tool: `frontend_design_loop_design`
+1. The host agent points the MCP at a real repo and a concrete page goal.
+2. The MCP boots a local preview and captures screenshots.
+3. The main model lane iterates against the rendered result by default.
+4. Deterministic gates catch structural regressions.
+5. The MCP returns the winning patch plus proof artifacts the host agent can inspect.
 
-High-level signature:
+That is the public wedge:
+- coding agents can already make pages work
+- Frontend Design Loop makes them materially better
+- screenshot-grounded iteration plus proof artifacts is what changes the result
 
-`frontend_design_loop_design(repo_path, goal, preview_command=..., preview_url=..., ...)`
-
-What it is for:
-- push a page beyond “works” into “looks deliberate”
-- run screenshot-grounded design passes without making you hand-wire all the creative defaults every time
-- start from a rough page, weak section, or base-model first pass and move it into a stronger visual class
-
-Default behavior:
-- `solver_mode="host_cli"`
-- one main `provider` + `model` lane by default
-- planner, design generation, vision, and section-creativity inherit that same lane unless explicitly overridden
-- `planning_mode="single"`
-- `vision_mode="on"`
-- `section_creativity_mode="on"`
-
-Key inputs:
-- `repo_path`
-- `goal`
-- `preview_command`
-- `preview_url`
-- main `provider` + `model`
-- optional explicit split overrides for `planner_provider` / `planner_model`
-- optional explicit split overrides for `vision_provider` / `vision_model`
-- optional `section_creativity_model`
-
-Behavior:
-- generate multiple design candidates
-- run deterministic gates
-- capture screenshots
-- run automated design review and section-creativity refinement
-- return the winner patch plus run artifacts
-
-Use this when the base model got the page functional but still generic, flat, or weak.
-
-## Tool: `frontend_design_loop_eval`
-
-High-level signature:
-
-`frontend_design_loop_eval(repo_path, patches, ...)`
-
-Key inputs:
-- `repo_path`
-- `patches`
-- `goal` optional
-- `test_command` optional
-- `lint_command` optional
-- `vision_mode=auto|on`
-- `vision_provider=client` by default
-- `preview_command` and `preview_url` when you want UI screenshots instead of diff screenshots
-- `unsafe_shell_commands=false` by default
-- `unsafe_external_preview=false` by default
-
-Behavior:
-- apply patch bundle in an isolated worktree
-- run deterministic gates
-- capture screenshots
-- either:
-  - return screenshots for host judgment, or
-  - run automated vision through a configured provider
-- write stable artifacts under the run directory
-
-Safety defaults:
-- custom commands are executed as shell-free argv by default
-- shell operators, substitutions, direct shell syntax, and inline interpreter/code execution like `bash -c`, `python -c`, and `node -e` require `unsafe_shell_commands=true`
-- `preview_url` must match the launched local preview origin and port unless `unsafe_external_preview=true`
-- preview readiness checks reject cross-origin redirects, and browser screenshots block cross-origin subresources by default
-- auto-context skips common secret-bearing paths by default, including `.git/`, `.docker/`, `.kube/`, token-named files, and service-account-style JSON
-- native CLI providers inherit a minimal allowlisted environment, not the full host shell env
-- shared worktree reuse dirs are disabled by default; opt in explicitly if you want to reuse `node_modules` or other heavy dirs
-
-## Vision modes
+## Vision Modes
 
 ### Default: `vision_provider=client`
 
-This is the best proof path when the host agent already owns the patch.
+This is the recommended interactive proof path.
 
-It requires no provider credentials.
-The MCP captures screenshots and returns them to the host agent.
-The host agent decides whether the page is acceptable.
+- no provider credentials required
+- the MCP captures screenshots and returns them to the host agent
+- the host agent decides whether the page is acceptable
 
 In this mode:
 - `vision_scored=false`
 - `vision_pending=true` when deterministic gates passed
 - `final_pass=null`
-- `passes_all_gates=false`
 
 ### Automated vision
 
-Optional providers can score screenshots inside Frontend Design Loop itself.
-This is useful for unattended or batch workflows, not as the default interactive path.
+Automated vision is available for unattended or batch workflows, but it is not the default public story.
 
 ### Proxy-structural vision lanes
 
-MiniMax-based proxy lanes (`kilo_cli`, `droid_cli`, `opencode_cli` on MiniMax) are not treated as full automated visual scoring.
+MiniMax-based proxy lanes such as `kilo_cli`, `droid_cli`, and `opencode_cli` on MiniMax are treated as structural-only screenshot review.
 
 In these lanes:
 - `vision_review_mode="proxy_structural"`
 - `vision_scored=false`
 - `vision_pending=true` when deterministic gates passed
-- `final_pass=null`
-- `vision_ok` reflects only structural render health from the proxy evidence
+- they do not count as full automated visual scoring
 
-## Optional advanced tool: `frontend_design_loop_solve`
+## Safety Defaults
 
-`frontend_design_loop_solve` remains available for advanced unattended workflows.
-It is not the main product story.
-
-If you are in Claude Code, Codex, Gemini CLI, Droid, or OpenCode interactively:
-- use `frontend_design_loop_design` first when you want the MCP to improve the design
-- use `frontend_design_loop_eval` when you already have the patch and want proof only
+- custom commands run as shell-free argv by default
+- shell syntax and inline interpreter execution like `bash -c`, `python -c`, and `node -e` require `unsafe_shell_commands=true`
+- `preview_url` must match the launched local preview origin and port unless `unsafe_external_preview=true`
+- preview readiness checks reject cross-origin redirects
+- browser screenshots block cross-origin subresources by default
+- auto-context skips common secret-bearing paths including `.git/`, `.docker/`, `.kube/`, token-named files, and service-account-style JSON
+- native CLI providers inherit a minimal allowlisted environment
+- shared worktree reuse directories are disabled by default
 
 ## Install
 
-### Public install right now
+### Public install now
+
+Use the GitHub install path until PyPI is actually published:
 
 ```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
@@ -151,24 +152,18 @@ frontend-design-loop-setup --install-all-detected-clients
 ./scripts/setup.sh
 ```
 
-This is the easiest repo-checkout path. It:
-- creates `.venv`
-- installs the package
-- installs Playwright Chromium
-- installs detected MCP client entries automatically when supported clients are available
-- runs the built-in doctor
-- runs the stdio smoke test
+The repo-local setup path creates `.venv`, installs the package, installs Playwright Chromium, installs detected client entries when supported clients are present, and runs doctor plus stdio smoke.
 
 ### Future PyPI install
 
-PyPI is not live yet. When it is published, the public install should become:
+PyPI is not live yet. Do not use this as the public install path until the package is actually published:
 
 ```bash
 pipx install frontend-design-loop-mcp
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
-## MCP config
+## MCP Config
 
 Packaged install example:
 
@@ -199,7 +194,7 @@ Local clone example:
 }
 ```
 
-## Setup helpers
+## Setup Helpers
 
 ```bash
 frontend-design-loop-setup --install-all-detected-clients
@@ -217,7 +212,7 @@ frontend-design-loop-setup --doctor
 frontend-design-loop-setup --doctor --smoke
 ```
 
-## Verification commands
+## Verification
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/preflight_check.py

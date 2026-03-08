@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "frontend-design-loop-mcp"
 version = "1.0.0"
-description = "Frontend Design Loop MCP - agent-first patch evaluation, preview, and screenshot tooling"
+description = "Design-first MCP that helps coding agents materially improve websites with screenshot-grounded iteration and proof artifacts"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -20,8 +20,10 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-keywords = ["mcp", "claude-code", "agentic", "automation", "code-review", "patch", "vision"]
+keywords = ["mcp", "frontend", "design", "screenshots", "proof-artifacts", "coding-agents", "websites"]
 dependencies = [
     "typer>=0.9.0",
     "rich>=13.0.0",

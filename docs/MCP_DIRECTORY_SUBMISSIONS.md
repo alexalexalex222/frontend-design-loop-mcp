@@ -2,7 +2,7 @@
 
 Use this file as the source of truth for listing `frontend-design-loop-mcp` on MCP directories.
 
-## Canonical repo
+## Canonical Repo
 
 - Repo: `https://github.com/alexalexalex222/frontend-design-loop-mcp`
 - Current public install:
@@ -12,33 +12,33 @@ pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
-## Canonical one-line description
+## Canonical One-Line Description
 
-Design-first MCP that helps coding agents start, fix, and materially improve websites with screenshot-grounded iteration and proof artifacts.
+MCP for coding agents that upgrades rough frontends with screenshot-grounded iteration and proof artifacts.
 
-## Short description
+## Short Description
 
-Frontend Design Loop MCP helps coding agents turn rough or generic frontends into stronger pages by iterating against real screenshots, then returning proof artifacts and the winning patch.
+Frontend Design Loop helps coding agents take a functional but weak page, iterate against real screenshots, and return the winning patch plus proof artifacts.
 
-## Longer description
+## Longer Description
 
-Frontend Design Loop MCP is an agent-first design and verification layer for frontend work.
+Frontend Design Loop MCP is a design and verification layer for coding agents working on websites.
 
-It is built for coding agents that already got the page functional but still need help making it look deliberate, fixing weak sections, or proving that a redesign actually improved the rendered result.
+It is built for the common gap where the base model already got the page functional, but the result still looks generic, flat, rough, or visibly unfinished.
 
-The main workflow, `frontend_design_loop_design`, stays on one main provider and model lane by default, boots a local preview, captures screenshots, iterates against the rendered result, and returns the winning patch plus proof artifacts.
+The main workflow, `frontend_design_loop_design`, boots a local preview, captures screenshots, iterates against the rendered result, and returns the winning patch plus proof artifacts. By default it stays on one main provider and model lane; split routing only happens when the caller explicitly asks for it.
 
 The support workflow, `frontend_design_loop_eval`, is the proof path for host-authored patches: deterministic checks, screenshots, run directories, and stable machine-readable output.
 
-## Core value props
+## Core Value Props
 
-- makes weak or generic frontends materially better, not just technically valid
+- helps coding agents make rough frontends materially better, not just technically valid
 - screenshot-grounded refinement instead of blind code-only tweaking
-- one main model lane by default, with split lanes only when explicitly requested
-- deterministic proof and artifact capture for coding-agent workflows
+- single-model by default, with split lanes only on explicit override
+- deterministic proof and artifact capture for host-agent workflows
 - works with Claude Code, Codex, Gemini CLI, Droid, OpenCode, and similar tools
 
-## Suggested tags
+## Suggested Tags
 
 - `frontend`
 - `design`
@@ -46,28 +46,27 @@ The support workflow, `frontend_design_loop_eval`, is the proof path for host-au
 - `mcp`
 - `coding-agents`
 - `screenshots`
-- `refinement`
 - `verification`
 
-## Suggested categories
+## Suggested Categories
 
 - Frontend Development
 - Design Tools
 - Developer Productivity
 - MCP / AI Agent Tooling
 
-## Proof blurb
+## Proof Blurb
 
-The repo includes a full-page before/after example showing an ugly early homepage version rebuilt into a materially stronger final page, plus a whole-page compare image. The product is meant to create visible page-level improvement, not just run static checks.
+The repo already includes a whole-page before/after ACA case showing an ugly early homepage rebuilt into a materially stronger result, plus compare and diff assets. The case-study landing page lives in `docs/case-studies/`, and additional whole-page proofs are intended to be published there as they land.
 
-## Install snippet
+## Install Snippet
 
 ```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
-## MCP config snippet
+## MCP Config Snippet
 
 ```json
 {
@@ -80,36 +79,40 @@ frontend-design-loop-setup --install-all-detected-clients
 }
 ```
 
-## Claude-specific setup snippet
+## Client Setup Snippets
+
+Claude:
 
 ```bash
 frontend-design-loop-setup --install-claude --scope user
 ```
 
-## Codex-specific setup snippet
+Codex:
 
 ```bash
 frontend-design-loop-setup --install-codex
 ```
 
-## Gemini-specific setup snippet
+Gemini:
 
 ```bash
 frontend-design-loop-setup --install-gemini
 ```
 
-## Submission notes by directory
+## Submission Notes By Directory
 
 ### Glama
 
 Use the short description plus the install snippet.
-If there is a field for why it matters, use:
 
-`It gives coding agents a screenshot-grounded design loop so they can materially improve rough frontends instead of stopping at functional output.`
+If there is a "why it matters" field, use:
+
+`It gives coding agents a screenshot-grounded loop for taking a page past functional output and into a materially stronger rendered result.`
 
 ### PulseMCP
 
 Use the longer description and the proof blurb.
+
 If there is a features field, use:
 - design-first workflow for weak frontends
 - proof workflow for host-authored patches
@@ -121,9 +124,9 @@ If there is a features field, use:
 
 Keep the headline tight:
 
-`Design-first MCP for starting, fixing, and upgrading websites.`
+`MCP for upgrading rough frontends with screenshot-grounded proof.`
 
 If there is a use-cases field, use:
 - upgrade weak AI-generated frontends
-- repair broken sections without losing momentum
+- fix rough or generic sections without losing momentum
 - capture proof artifacts for host-agent review

@@ -48,22 +48,6 @@ jobs:
       - name: Install Playwright Chromium
         run: |
           python -m playwright install chromium
-      - name: Offline repo verification
+      - name: Release verification
         run: |
-          PYTHONPATH=src python scripts/preflight_check.py
-          PYTHONPATH=src python scripts/smoke_mcp_stdio.py
-      - name: Build distribution
-        run: |
-          python -m build
-          python -m twine check dist/*
-      - name: Wheel smoke
-        shell: bash
-        run: |
-          set -euo pipefail
-          TMP_VENV="$(mktemp -d)"
-          python -m venv "$TMP_VENV"
-          "$TMP_VENV/bin/pip" install dist/*.whl
-          "$TMP_VENV/bin/frontend-design-loop-mcp" --help
-          "$TMP_VENV/bin/frontend-design-loop-mcp" --version
-          "$TMP_VENV/bin/frontend-design-loop-setup"
-          "$TMP_VENV/bin/frontend-design-loop-setup" --check
+          ./scripts/verify_release.sh --python=python --skip-github-install

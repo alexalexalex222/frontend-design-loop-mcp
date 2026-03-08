@@ -2,80 +2,81 @@
 
 ## Goal
 
-Make `frontend-design-loop-mcp` easy to install, easy to believe, and easy to discover.
+Keep the public story narrow and believable:
+- coding agents can get pages functional
+- Frontend Design Loop makes them materially better
+- screenshot-grounded iteration plus proof artifacts is the differentiator
 
-## Phase 1: Current public launch
+## Public Story Checklist
 
-This is the minimum launch state that should exist before promoting the repo.
-
-- public repo is live and clean
-- README above-the-fold includes:
-  - one-sentence promise
-  - public install command
-  - one MCP setup command
+- README above the fold includes:
+  - one-line promise
+  - one public install command
+  - one setup command
+  - one real MCP call example
   - one strong whole-page before/after proof
-  - one concrete tool-call example
-- local verification is green:
-  - tests
-  - offline preflight
-  - stdio smoke
-- MCP docs match the public install story
-- directory submission copy exists
+  - link to `docs/case-studies/index.md`
+  - short explanation of how the MCP works in practice
+- `docs/FRONTEND_DESIGN_LOOP_MCP.md` keeps the single-model default explicit
+- public docs do not imply multi-model-by-default behavior
+- public docs do not claim PyPI is live unless it has actually been published
+- public docs do not reintroduce legacy public branding or old repo identities
 
-## Phase 2: Distribution
+## Proof Checklist
 
-### Current public install path
+- ACA whole-page proof is present in `docs/images/`
+- case-study landing page exists at `docs/case-studies/index.md`
+- traction push should include at least 3 whole-page case studies
+- each case study should include:
+  - whole-page before
+  - whole-page after
+  - whole-page compare
+  - short write-up on what changed and why it matters
+- no fake before states
+- no section-only headline proof
+
+## Distribution Checklist
+
+- canonical install snippet uses:
 
 ```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
-### Future public install path
+- `docs/MCP_DIRECTORY_SUBMISSIONS.md` is the source of truth for directory copy
+- submission targets:
+  - Glama
+  - PulseMCP
+  - MCP Market
 
-Use this only after PyPI is actually live:
+## Verification Checklist
+
+Run these before claiming the docs and launch surface are clean:
 
 ```bash
-pipx install frontend-design-loop-mcp
-frontend-design-loop-setup --install-all-detected-clients
+rg -n "single-model default|split routing only happens when the caller explicitly asks" README.md docs/FRONTEND_DESIGN_LOOP_MCP.md
+test -f docs/images/aca-site50-v9-fullpage-before.png
+test -f docs/images/aca-site50-v22-fullpage-after.png
 ```
 
-## Phase 3: Proof assets
+Repo-level verification expected after merge:
 
-Before pushing traction, make sure the repo has at least:
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q --import-mode=importlib
+PYTHONPATH=src .venv/bin/python scripts/preflight_check.py
+PYTHONPATH=src .venv/bin/python scripts/smoke_mcp_stdio.py
+python -m build
+twine check dist/*
+```
 
-- 3 full-page before/after case studies
-- 1 case where the base page is ugly but functional
-- 1 case where the page is broken or rough and gets fixed
-- 1 case where an AI-generated page gets materially improved
-- one whole-page compare image for each
-- one short explanation of what changed and why it matters
+## PyPI Release
 
-## Phase 4: Directory submissions
-
-Submit to:
-- Glama
-- PulseMCP
-- MCP Market
-
-Use `docs/MCP_DIRECTORY_SUBMISSIONS.md` as the source for submission copy.
-
-## Phase 5: Launch message
-
-The launch story should be narrow and believable:
-- coding agents already make pages work
-- this MCP makes them look materially better
-- it does that with screenshot-grounded iteration and proof artifacts
-
-Avoid positioning it as a generic everything-tool.
-
-## Phase 6: PyPI release
-
-Only after the public GitHub launch path is stable:
+Only switch the public install story after PyPI is actually live:
 
 1. bump version in `pyproject.toml`
-2. run release checklist from `RELEASING.md`
+2. run the release checklist from `RELEASING.md`
 3. publish to PyPI
 4. verify `pipx install frontend-design-loop-mcp`
-5. update README and docs to make PyPI the primary install path
+5. update README and docs to make the PyPI install path primary
 6. refresh directory listings with the PyPI install path

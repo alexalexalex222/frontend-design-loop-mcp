@@ -1,37 +1,29 @@
 # Frontend Design Loop MCP
 
-Design-first MCP for coding agents that need to start, fix, and materially improve websites.
+Coding agents can get a page functional. Frontend Design Loop makes it materially better with screenshot-grounded iteration and proof artifacts.
 
-Frontend Design Loop is built for Claude Code, Codex, Gemini CLI, Droid, OpenCode, and similar agents when the base model got the page functional but not yet sharp.
+Use it when the base model got the page working but the result is still generic, flat, rough, or visibly under-designed. The main design workflow stays on one main provider and model lane by default, so multi-model routing is opt-in instead of the default story.
 
-It is for three concrete jobs:
-- start a stronger frontend from a weak first pass
-- fix broken, generic, or under-designed sections with screenshot-grounded iteration
-- verify the result with deterministic proof and artifact capture
+## Quick Start
 
-## 60-second path
-
-Public install right now:
+Install the current public build from GitHub:
 
 ```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
+```
+
+Set up every detected supported client:
+
+```bash
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
-Local clone path:
-
-```bash
-git clone https://github.com/alexalexalex222/frontend-design-loop-mcp.git
-cd frontend-design-loop-mcp
-./scripts/setup.sh
-```
-
-Then use the design-first tool when you want the MCP to actively improve the page:
+Real MCP call example:
 
 ```text
 frontend_design_loop_design(
   repo_path="/absolute/path/to/site",
-  goal="make the homepage look materially more premium without breaking the current layout",
+  goal="make the homepage look materially more premium without changing the information architecture",
   provider="gemini_cli",
   model="gemini-3.1-pro-preview",
   preview_command="python3 -m http.server {port}",
@@ -39,39 +31,32 @@ frontend_design_loop_design(
 )
 ```
 
-## What it actually does
+## What The MCP Does
 
-Frontend Design Loop owns two workflows:
+`frontend_design_loop_design` is the main workflow:
+- the host agent points the MCP at a real repo plus a concrete design goal
+- the MCP boots a local preview, captures screenshots, and iterates against the rendered result
+- the same main provider and model lane is used by default across planning, generation, and vision unless you explicitly override it
+- the MCP returns the winning patch plus screenshots and run artifacts
 
-- `frontend_design_loop_design`
-  - the builder / fixer / design-enhancement path
-  - use this when the base model made the page work but the result still looks generic, weak, broken, or unfinished
-- `frontend_design_loop_eval`
-  - the proof path
-  - use this when you already have the patch and want deterministic checks, screenshots, and artifacts
+`frontend_design_loop_eval` is the proof workflow:
+- use it when the host agent already has the patch
+- the MCP applies the patch in an isolated worktree, runs deterministic checks, captures screenshots, and returns proof artifacts
 
-The default design contract is simple:
-- one main `provider` + `model` lane by default
-- planning, generation, refinement, vision, and section-creativity inherit that same lane unless you explicitly override them
-- split-lane routing is opt-in only
+This is the wedge:
+- coding agents can already get pages working
+- this MCP helps them make pages materially better
+- screenshot-grounded iteration plus proof artifacts is the differentiator
 
-## Why it exists
+## Whole-Page Proof
 
-Most coding agents can get a site functional.
-Fewer can make it look deliberate.
-Even fewer can improve it against the rendered result instead of guessing from code alone.
+The repo already includes a real whole-page before/after example showing the type of upgrade this MCP is meant to drive.
 
-Frontend Design Loop closes that gap by making screenshot-grounded design iteration cheap and repeatable.
-
-## Whole-page proof
-
-This is the kind of full-page upgrade the design-first path is meant to support.
-
-Before: the first ugly ACA full-home version.
+Before: ugly early ACA full homepage.
 
 ![ACA full-page before](docs/images/aca-site50-v9-fullpage-before.png)
 
-After: the rebuilt ACA version with a stronger hero, cleaner systems/specimen/doctrine sections, and a much better closing sequence.
+After: rebuilt ACA homepage with a stronger hero, cleaner sequencing, and a materially better full-page result.
 
 ![ACA full-page after](docs/images/aca-site50-v22-fullpage-after.png)
 
@@ -83,57 +68,81 @@ Whole-page diff:
 
 ![ACA whole-page diff](docs/images/aca-site50-v9-v22-wholepage-diff.png)
 
-This is the point of the product: not generic polish, but a measurable page-level change a host agent can use in real work.
+More proof lives in [the case studies index](docs/case-studies/index.md).
 
-## How it works
+## Workflow Summary
 
-Typical design-first loop:
-- the host agent points the MCP at a weak page, broken section, or rough patch
-- Frontend Design Loop boots a local preview and captures screenshots
-- the same main model lane iterates against the rendered result by default
-- deterministic gates keep the output from regressing structurally
-- the MCP returns the winning patch plus screenshot and run artifacts
+### `frontend_design_loop_design`
 
-Typical eval loop:
+Use it when:
+- the page is functional but weak
+- the section structure is there but the design is not
+- you want the MCP to improve the page instead of only judging it
+
+Key defaults:
+- one main `provider` + `model` lane by default
+- `planning_mode="single"`
+- `vision_mode="on"`
+- `section_creativity_mode="on"`
+- split planner or vision lanes only happen when explicitly requested
+
+### `frontend_design_loop_eval`
+
+Use it when:
 - the host agent already has the patch
-- Frontend Design Loop applies it in an isolated worktree
-- runs build, lint, tests, preview, and screenshot capture
-- returns deterministic status plus artifacts for host judgment
+- you want deterministic checks, screenshots, and artifact capture
+- you want the host agent to judge the result from returned screenshots
 
-## Install and client setup
+Returned proof fields include:
+- `deterministic_passed`
+- `vision_pending`
+- `vision_scored`
+- `final_pass`
+- `run_dir`
+- `candidate_dir`
+- `screenshot_files`
+- `patch`
 
-### Public install
+### `frontend_design_loop_solve`
 
-Use GitHub install until PyPI is published:
+`frontend_design_loop_solve` still exists for advanced unattended workflows, but it is not the main public story.
+
+## Install And Setup
+
+### Public install now
+
+Use the GitHub install path until PyPI is actually published:
 
 ```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
-### Local clone
+### Local clone path
 
 ```bash
+git clone https://github.com/alexalexalex222/frontend-design-loop-mcp.git
+cd frontend-design-loop-mcp
 ./scripts/setup.sh
 ```
 
-What the local setup does:
+The local setup path:
 - creates `.venv`
 - installs the package
 - installs Playwright Chromium
-- installs detected MCP client entries automatically when supported clients are present
+- installs detected client entries when supported clients are present
 - runs the built-in doctor
 - runs the stdio smoke test
 
-Skip automatic client installs if you want a dry setup:
+If you want the repo-local environment without auto-installing client entries:
 
 ```bash
 FDL_SKIP_CLIENT_INSTALL=1 ./scripts/setup.sh
 ```
 
-### Client installers
+### Setup helpers
 
-Fastest bulk path:
+Bulk installer:
 
 ```bash
 frontend-design-loop-setup --install-all-detected-clients
@@ -149,7 +158,7 @@ frontend-design-loop-setup --install-droid
 frontend-design-loop-setup --install-opencode
 ```
 
-Manual config printers:
+Config printers:
 
 ```bash
 frontend-design-loop-setup --print-claude-config
@@ -159,60 +168,21 @@ frontend-design-loop-setup --print-droid-config
 frontend-design-loop-setup --print-opencode-config
 ```
 
-## Tool contracts
+## Safety Defaults
 
-### `frontend_design_loop_design`
-
-Use this when you want the MCP to actively make the design better.
-
-Default behavior:
-- `solver_mode="host_cli"`
-- one main `provider` + `model` lane by default
-- planner, design generation, vision, and section-creativity inherit that same lane unless explicitly overridden
-- `planning_mode="single"`
-- `vision_mode="on"`
-- `section_creativity_mode="on"`
-
-Use it when:
-- the base model got the page functional but still generic
-- a section works structurally but looks weak
-- you need a real redesign pass instead of only validation
-
-### `frontend_design_loop_eval`
-
-Use this when the host agent already has the patch or can generate it itself.
-
-It returns:
-- `deterministic_passed`
-- `vision_pending`
-- `vision_scored`
-- `final_pass`
-- `run_dir`
-- `candidate_dir`
-- `screenshot_files`
-- `patch`
-
-## Safety defaults
-
-Interactive-path safety:
-- `test_command`, `lint_command`, and `preview_command` are parsed as shell-free argv by default
-- shell operators and substitutions require `unsafe_shell_commands=true`
-- direct interpreter escapes like `bash -c`, `sh -c`, `python -c`, and `node -e` also require `unsafe_shell_commands=true`
-- `preview_url` must resolve to the exact launched local preview origin and port by default
+- custom commands are parsed as shell-free argv by default
+- shell syntax, substitutions, and inline interpreter execution like `bash -c`, `python -c`, and `node -e` require `unsafe_shell_commands=true`
+- `preview_url` must match the launched local preview origin and port by default
 - external preview fetches require `unsafe_external_preview=true`
 - preview readiness checks reject cross-origin redirects, and browser screenshots block cross-origin subresources by default
-- auto-context skips common secret-bearing files and directories by default, including `.env*`, `.git/`, `.aws/`, `.ssh/`, `.config/gcloud/`, `.docker/`, `.kube/`, token-named files, and service-account-style JSON
-- native CLI providers inherit a minimal allowlisted environment instead of the full host env
-- shared worktree reuse dirs are off by default; opt in only if you intentionally trade isolation for speed
+- auto-context skips common secret-bearing paths such as `.env*`, `.git/`, `.aws/`, `.ssh/`, `.config/gcloud/`, `.docker/`, `.kube/`, token-named files, and service-account-style JSON
+- native CLI providers inherit a minimal allowlisted environment instead of the full host shell environment
+- shared worktree reuse directories are off by default
 
-Client-side vision is the default for `frontend_design_loop_eval`:
-- no provider credentials required
-- the host agent judges the screenshots
-- Frontend Design Loop reports `vision_pending=true` until that judgment happens
+Client-side vision is the default proof path for `frontend_design_loop_eval`, so the host agent can judge the screenshots without provider credentials.
 
-Proxy-only automated vision lanes are explicitly downgraded:
-- MiniMax proxy lanes (`kilo_cli`, `droid_cli`, `opencode_cli` on MiniMax) are treated as structural-only screenshot checks
-- they report `vision_review_mode="proxy_structural"`
+Proxy-only MiniMax vision lanes are explicitly treated as structural-only review:
+- `vision_review_mode="proxy_structural"`
 - they do not count as full automated visual scoring
 
 ## Verification
@@ -236,23 +206,14 @@ frontend-design-loop-setup --doctor
 frontend-design-loop-setup --doctor --smoke
 ```
 
-## Environment variables
+## Docs
 
-Primary env vars:
-- `FRONTEND_DESIGN_LOOP_CONFIG_PATH`
-- `FRONTEND_DESIGN_LOOP_MCP_OUT_DIR`
-- `FRONTEND_DESIGN_LOOP_MCP_PORT_START`
+- [Workflow reference](docs/FRONTEND_DESIGN_LOOP_MCP.md)
+- [Launch checklist](docs/LAUNCH_CHECKLIST.md)
+- [Directory submission copy](docs/MCP_DIRECTORY_SUBMISSIONS.md)
+- [Case studies](docs/case-studies/index.md)
 
-## Repo layout
-
-- `src/frontend_design_loop_mcp/`: packaged CLI entrypoints, runtime paths, bundled assets
-- `src/frontend_design_loop_core/`: MCP runtime, deterministic gates, screenshot/vision plumbing, provider adapters
-- `config/config.yaml`: default local-clone config
-- `prompts/`: reasoning overlays and prompt packs
-- `templates/`: default Next.js template used by the runtime
-- `tests/`: MCP-focused regression suite
-
-## Current distribution state
+## Distribution State
 
 Current public install path:
 
@@ -260,9 +221,4 @@ Current public install path:
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
 ```
 
-PyPI is not published yet.
-When that changes, the public install path should become:
-
-```bash
-pipx install frontend-design-loop-mcp
-```
+PyPI is not live yet. Do not switch the public install story to `pipx install frontend-design-loop-mcp` until the package is actually published.

@@ -42,6 +42,7 @@ templates/*/out/
 .context/
 .handoff/
 .packets/
+.orchestrator/
 private/
 prompts/codex_context/
 context-dump/
