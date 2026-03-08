@@ -45,6 +45,11 @@ frontend-design-loop-setup --install-all-detected-clients
 ```
 
 - `docs/MCP_DIRECTORY_SUBMISSIONS.md` is the source of truth for directory copy
+- PyPI Trusted Publishing is the preferred release path:
+  - workflow file: `.github/workflows/release.yml`
+  - GitHub environment: `pypi`
+  - PyPI project name: `frontend-design-loop-mcp`
+  - pending publisher values are documented in `RELEASING.md`
 - submission targets:
   - Glama
   - PulseMCP
