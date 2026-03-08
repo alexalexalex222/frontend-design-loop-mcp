@@ -8,7 +8,11 @@ import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 README_PATH = REPO_ROOT / 'README.md'
