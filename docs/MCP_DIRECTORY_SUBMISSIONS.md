@@ -58,7 +58,7 @@ The support workflow, `frontend_design_loop_eval`, is the proof path for host-au
 
 ## Proof Blurb
 
-The repo already includes a whole-page before/after ACA case showing an ugly early homepage rebuilt into a materially stronger result, plus compare and diff assets. The case-study landing page lives in `docs/case-studies/`, and additional whole-page proofs are intended to be published there as they land.
+The repo already includes a whole-page ACA before/after pair showing an ugly early homepage rebuilt into a materially stronger result. The case-study landing page lives in `docs/case-studies/`, and the public proof surface is intentionally sparse until additional owned/generated whole-page proofs are both visually strong and legally safe to publish.
 
 ## Install Snippet
 
@@ -101,6 +101,19 @@ frontend-design-loop-setup --install-gemini
 ```
 
 ## Submission Notes By Directory
+
+## Current Live Status
+
+Status snapshot from 2026-03-09:
+- GitHub repo and PyPI package are live under `frontend-design-loop-mcp`
+- Glama new-slug page `@alexalexalex222/frontend-design-loop-mcp` still resolves to the legacy `petamind-mcp` listing
+- PulseMCP new-slug page returns `404`
+- MCP Market new-slug page returns `403` from this shell, so browser/manual verification is still pending
+
+Recommended next moves:
+- Glama: fix or replace the legacy listing so the new slug stops redirecting to `petamind-mcp`
+- PulseMCP: submit or refresh the new listing
+- MCP Market: verify manually in a browser session, then submit or refresh if needed
 
 ### Glama
 

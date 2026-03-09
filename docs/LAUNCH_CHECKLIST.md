@@ -25,12 +25,12 @@ Keep the public story narrow and believable:
 
 - ACA whole-page proof is present in `docs/images/`
 - case-study landing page exists at `docs/case-studies/index.md`
-- traction push should include at least 3 whole-page case studies
+- public proof surface stays intentionally sparse until another owned/generated whole-page case is both visually strong and legally safe to publish
 - each case study should include:
   - whole-page before
   - whole-page after
-  - whole-page compare
   - short write-up on what changed and why it matters
+- no third-party site captures or legally questionable proof
 - no fake before states
 - no section-only headline proof
 
@@ -61,6 +61,12 @@ frontend-design-loop-setup --install-all-detected-clients
   - PulseMCP
   - MCP Market
 
+Current external status as of 2026-03-09:
+- GitHub raw repo docs are live and PyPI is live at `frontend-design-loop-mcp`
+- Glama new-slug URL still resolves to the legacy `petamind-mcp` listing
+- PulseMCP new-slug URL returns `404`
+- MCP Market new-slug URL returns `403` from this shell, so browser/manual verification is still required
+
 ## Verification Checklist
 
 Run these before claiming the docs and launch surface are clean:
@@ -69,6 +75,9 @@ Run these before claiming the docs and launch surface are clean:
 rg -n "single-model default|split routing only happens when the caller explicitly asks" README.md docs/FRONTEND_DESIGN_LOOP_MCP.md
 test -f docs/images/aca-site50-v9-fullpage-before.png
 test -f docs/images/aca-site50-v22-fullpage-after.png
+curl -sS -L https://glama.ai/mcp/servers/@alexalexalex222/frontend-design-loop-mcp | rg -n "Petamind MCP|frontend-design-loop-mcp"
+curl -sS -L https://www.pulsemcp.com/servers/frontend-design-loop-mcp | rg -n "Page Not Found|frontend-design-loop-mcp"
+curl -sS -L -o /dev/null -w "%{http_code}\n" https://www.mcpmarket.com/server/frontend-design-loop-mcp
 ```
 
 Repo-level verification expected after merge:
@@ -81,12 +90,17 @@ python -m build
 twine check dist/*
 ```
 
-## PyPI Release
+## Release Maintenance
 
-Only switch the public install story after PyPI is actually live:
+PyPI is already live. Keep the public install story anchored on:
+
+```bash
+pipx install frontend-design-loop-mcp
+frontend-design-loop-setup --install-all-detected-clients
+```
 
 1. bump version in `pyproject.toml`
 2. run the release checklist from `RELEASING.md`
 3. publish to PyPI
 4. verify `pipx install frontend-design-loop-mcp`
-5. refresh directory listings with the PyPI install path
+5. refresh directory listings and public docs if the install or proof story changed
