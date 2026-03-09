@@ -1,6 +1,6 @@
 # Case Studies
 
-Frontend Design Loop should be judged on whole-page deltas, not section crops. This index collects the published before/after proof used in the README and directory submissions.
+Frontend Design Loop should be judged on whole-page deltas, not section crops.
 
 ## Published Now
 
@@ -9,40 +9,20 @@ Frontend Design Loop should be judged on whole-page deltas, not section crops. T
 Whole-page assets:
 - [Before](../images/aca-site50-v9-fullpage-before.png)
 - [After](../images/aca-site50-v22-fullpage-after.png)
-- [Compare](../images/aca-site50-v9-v22-wholepage-compare.png)
-- [Diff](../images/aca-site50-v9-v22-wholepage-diff.png)
 
 What it proves:
 - the MCP is meant to create visible page-level improvement, not just pass technical checks
+- the public proof set uses owned/generated assets only
 - the before and after are whole-page states, not cropped hero fragments
 
 Case-study page:
-- [ACA Homepage Rebuild case study](../README.md#whole-page-proof)
+- [ACA Homepage Rebuild proof](../README.md#whole-page-proof)
 
-### Rocko's Body Shop
+## Public Proof Policy
 
-Whole-page assets:
-- [Before](../images/case-study-rockos-before.png)
-- [After](../images/case-study-rockos-after.png)
-- [Compare](../images/case-study-rockos-compare.png)
-
-Case-study page:
-- [Rocko's Body Shop](rockos.md)
-
-What it proves:
-- ugly-but-functional live local-service pages can be turned into stronger intake surfaces
-- the MCP story is not limited to hero polish; the whole page gets materially tighter
-
-### MaidPro Marietta
-
-Whole-page assets:
-- [Before](../images/case-study-maidpro-before.png)
-- [After](../images/case-study-maidpro-after.png)
-- [Compare](../images/case-study-maidpro-compare.png)
-
-Case-study page:
-- [MaidPro Marietta](maidpro.md)
-
-What it proves:
-- a weak AI-generated page can be turned into a stronger local-service homepage
-- the MCP can move a page from "clean enough to render" to "actually sells the offer"
+The public repo should not ship third-party site captures or ugly diff artifacts as headline proof.
+Additional public case studies will only be added when the before/after pair is:
+- whole-page
+- visually strong
+- legally safe to publish
+- aligned with the actual product story

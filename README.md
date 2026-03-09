@@ -54,9 +54,9 @@ Official MCP Registry metadata is tracked in [`server.json`](server.json).
 
 ## Whole-Page Proof
 
-The repo already includes a real whole-page before/after example showing the type of upgrade this MCP is meant to drive.
+The public proof set only uses owned/generated assets.
 
-Before: ugly early ACA full homepage.
+Before: early ACA full homepage.
 
 ![ACA full-page before](docs/images/aca-site50-v9-fullpage-before.png)
 
@@ -64,15 +64,14 @@ After: rebuilt ACA homepage with a stronger hero, cleaner sequencing, and a mate
 
 ![ACA full-page after](docs/images/aca-site50-v22-fullpage-after.png)
 
-Whole-page compare:
+See the proof notes in [the case studies index](docs/case-studies/index.md).
 
-![ACA whole-page before vs after](docs/images/aca-site50-v9-v22-wholepage-compare.png)
+## How It Works In Practice
 
-Whole-page diff:
-
-![ACA whole-page diff](docs/images/aca-site50-v9-v22-wholepage-diff.png)
-
-More proof lives in [the case studies index](docs/case-studies/index.md).
+1. Point the MCP at a real repo and give it a concrete design goal.
+2. It creates an isolated worktree, boots a preview, and captures rendered screenshots.
+3. It iterates against the actual rendered page instead of only raw code.
+4. It returns the winning patch, screenshot proof, and run artifacts so the host agent can judge the result.
 
 ## Workflow Summary
 
