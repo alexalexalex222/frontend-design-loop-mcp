@@ -14,7 +14,7 @@ Keep the public story narrow and believable:
   - one public install command
   - one setup command
   - one real MCP call example
-  - the selected GA SMB preview gallery requested for public proof
+  - the selected GA SMB hero/top crop gallery requested for public proof
   - ACA whole-page before/after proof
   - link to `docs/case-studies/index.md`
   - short explanation of how the MCP works in practice
@@ -24,7 +24,7 @@ Keep the public story narrow and believable:
 
 ## Proof Checklist
 
-- the selected GA SMB preview gallery images are present in `docs/images/`
+- the selected GA SMB hero/top crop gallery images are present in `docs/images/`
 - ACA whole-page proof is present in `docs/images/`
 - case-study landing page exists at `docs/case-studies/index.md`
 - each public proof entry should include:

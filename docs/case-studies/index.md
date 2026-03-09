@@ -1,25 +1,26 @@
 # Case Studies
 
-Frontend Design Loop should be judged on visible deltas in rendered output, including selected desktop previews and whole-page rebuilds.
+Frontend Design Loop should be judged on visible deltas in rendered output, including selected hero/top crops and whole-page rebuilds.
 
 ## Published Now
 
-### Selected GA SMB Desktop Preview Gallery
+### Selected GA SMB Hero / Top Crop Gallery
 
-Selected previews requested for the public README:
-- [11 Budget Movers Augusta](../images/11-budget-movers-augusta_desktop_preview.png)
-- [13 Peachtree Flooring Atlanta](../images/13-peachtree-flooring-atlanta_desktop_preview.png)
-- [19 TNT Cabinets Columbus](../images/19-tnt-cabinets-columbus_desktop_preview.png)
-- [21 Henry Plumbing Savannah](../images/21-henry-plumbing-savannah_desktop_preview.png)
-- [22 Silverback Electric Savannah](../images/22-silverback-electric-savannah_desktop_preview.png)
-- [25 Robins Body & Paint Warner Robins](../images/25-robins-body-paint-warner-robins_desktop_preview.png)
-- [34 Proof Roofing Services Gainesville](../images/34-proof-roofing-services-gainesville_desktop_preview.png)
-- [45 Metro Storage Columbus](../images/45-metro-storage-columbus_desktop_preview.png)
-- [47 Miller Light Construction Commerce](../images/47-miller-light-construction-commerce_desktop_preview.png)
+Selected hero/top crops requested for the public README:
+- [11 Budget Movers Augusta](../images/11-budget-movers-augusta_hero_top_crop.png)
+- [13 Peachtree Flooring Atlanta](../images/13-peachtree-flooring-atlanta_hero_top_crop.png)
+- [19 TNT Cabinets Columbus](../images/19-tnt-cabinets-columbus_hero_top_crop.png)
+- [21 Henry Plumbing Savannah](../images/21-henry-plumbing-savannah_hero_top_crop.png)
+- [22 Silverback Electric Savannah](../images/22-silverback-electric-savannah_hero_top_crop.png)
+- [25 Robins Body & Paint Warner Robins](../images/25-robins-body-paint-warner-robins_hero_top_crop.png)
+- [34 Proof Roofing Services Gainesville](../images/34-proof-roofing-services-gainesville_hero_top_crop.png)
+- [45 Metro Storage Columbus](../images/45-metro-storage-columbus_hero_top_crop.png)
+- [47 Miller Light Construction Commerce](../images/47-miller-light-construction-commerce_hero_top_crop.png)
 
 What it proves:
 - the MCP can produce strong screenshot-first local-service surfaces across multiple verticals
-- the public proof surface now includes the exact selected preview examples used in the README
+- the public proof surface now uses the exact selected hero/top crops requested in the README
+- `19` and `47` were refreshed for this crop set before export
 - the public repo still uses owned/generated assets only
 
 ### ACA Homepage Rebuild
