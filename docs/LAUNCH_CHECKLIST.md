@@ -14,7 +14,8 @@ Keep the public story narrow and believable:
   - one public install command
   - one setup command
   - one real MCP call example
-  - one strong whole-page before/after proof
+  - the selected GA SMB preview gallery requested for public proof
+  - ACA whole-page before/after proof
   - link to `docs/case-studies/index.md`
   - short explanation of how the MCP works in practice
 - `docs/FRONTEND_DESIGN_LOOP_MCP.md` keeps the single-model default explicit
@@ -23,16 +24,15 @@ Keep the public story narrow and believable:
 
 ## Proof Checklist
 
+- the selected GA SMB preview gallery images are present in `docs/images/`
 - ACA whole-page proof is present in `docs/images/`
 - case-study landing page exists at `docs/case-studies/index.md`
-- public proof surface stays intentionally sparse until another owned/generated whole-page case is both visually strong and legally safe to publish
-- each case study should include:
-  - whole-page before
-  - whole-page after
-  - short write-up on what changed and why it matters
+- each public proof entry should include:
+  - rendered image evidence
+  - a short note on what it proves
 - no third-party site captures or legally questionable proof
 - no fake before states
-- no section-only headline proof
+- no misleading proof framing
 
 ## Distribution Checklist
 

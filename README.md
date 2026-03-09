@@ -52,9 +52,31 @@ This is the wedge:
 
 Official MCP Registry metadata is tracked in [`server.json`](server.json).
 
-## Whole-Page Proof
+## Proof Gallery
 
-The public proof set only uses owned/generated assets.
+The public proof set uses owned/generated GA SMB previews plus the ACA full-page before/after.
+
+### Selected Desktop Previews
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/11-budget-movers-augusta_desktop_preview.png" alt="11 Budget Movers Augusta desktop preview"><br><sub>11 Budget Movers Augusta</sub></td>
+    <td align="center"><img src="docs/images/13-peachtree-flooring-atlanta_desktop_preview.png" alt="13 Peachtree Flooring Atlanta desktop preview"><br><sub>13 Peachtree Flooring Atlanta</sub></td>
+    <td align="center"><img src="docs/images/19-tnt-cabinets-columbus_desktop_preview.png" alt="19 TNT Cabinets Columbus desktop preview"><br><sub>19 TNT Cabinets Columbus</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/21-henry-plumbing-savannah_desktop_preview.png" alt="21 Henry Plumbing Savannah desktop preview"><br><sub>21 Henry Plumbing Savannah</sub></td>
+    <td align="center"><img src="docs/images/22-silverback-electric-savannah_desktop_preview.png" alt="22 Silverback Electric Savannah desktop preview"><br><sub>22 Silverback Electric Savannah</sub></td>
+    <td align="center"><img src="docs/images/25-robins-body-paint-warner-robins_desktop_preview.png" alt="25 Robins Body & Paint Warner Robins desktop preview"><br><sub>25 Robins Body &amp; Paint Warner Robins</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/34-proof-roofing-services-gainesville_desktop_preview.png" alt="34 Proof Roofing Services Gainesville desktop preview"><br><sub>34 Proof Roofing Services Gainesville</sub></td>
+    <td align="center"><img src="docs/images/45-metro-storage-columbus_desktop_preview.png" alt="45 Metro Storage Columbus desktop preview"><br><sub>45 Metro Storage Columbus</sub></td>
+    <td align="center"><img src="docs/images/47-miller-light-construction-commerce_desktop_preview.png" alt="47 Miller Light Construction Commerce desktop preview"><br><sub>47 Miller Light Construction Commerce</sub></td>
+  </tr>
+</table>
+
+### ACA Full-Page Before / After
 
 Before: early ACA full homepage.
 

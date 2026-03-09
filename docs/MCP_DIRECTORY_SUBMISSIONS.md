@@ -58,7 +58,7 @@ The support workflow, `frontend_design_loop_eval`, is the proof path for host-au
 
 ## Proof Blurb
 
-The repo already includes a whole-page ACA before/after pair showing an ugly early homepage rebuilt into a materially stronger result. The case-study landing page lives in `docs/case-studies/`, and the public proof surface is intentionally sparse until additional owned/generated whole-page proofs are both visually strong and legally safe to publish.
+The repo now includes the selected GA SMB desktop preview gallery entries `11`, `13`, `19`, `21`, `22`, `25`, `34`, `45`, and `47`, plus the ACA whole-page before/after pair. The case-study landing page lives in `docs/case-studies/`, and the public proof surface uses owned/generated assets only.
 
 ## Install Snippet
 
