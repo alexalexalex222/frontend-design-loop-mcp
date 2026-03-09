@@ -8,10 +8,10 @@ Use it when the base model got the page working but the result is still generic,
 
 ## Quick Start
 
-Install the current public build from GitHub:
+Install the current public build from PyPI:
 
 ```bash
-pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
+pipx install frontend-design-loop-mcp
 ```
 
 Set up every detected supported client:
@@ -51,7 +51,6 @@ This is the wedge:
 - screenshot-grounded iteration plus proof artifacts is the differentiator
 
 Official MCP Registry metadata is tracked in [`server.json`](server.json).
-Actual registry publication stays gated behind a live PyPI package.
 
 ## Whole-Page Proof
 
@@ -116,7 +115,12 @@ Returned proof fields include:
 
 ### Public install now
 
-Use the GitHub install path until PyPI is actually published:
+```bash
+pipx install frontend-design-loop-mcp
+frontend-design-loop-setup --install-all-detected-clients
+```
+
+GitHub install remains the fallback:
 
 ```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
@@ -223,7 +227,5 @@ frontend-design-loop-setup --doctor --smoke
 Current public install path:
 
 ```bash
-pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
+pipx install frontend-design-loop-mcp
 ```
-
-PyPI is not live yet. Do not switch the public install story to `pipx install frontend-design-loop-mcp` until the package is actually published.

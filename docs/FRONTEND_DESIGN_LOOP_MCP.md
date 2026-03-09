@@ -139,7 +139,12 @@ In these lanes:
 
 ### Public install now
 
-Use the GitHub install path until PyPI is actually published:
+```bash
+pipx install frontend-design-loop-mcp
+frontend-design-loop-setup --install-all-detected-clients
+```
+
+GitHub install remains the fallback:
 
 ```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
@@ -154,12 +159,12 @@ frontend-design-loop-setup --install-all-detected-clients
 
 The repo-local setup path creates `.venv`, installs the package, installs Playwright Chromium, installs detected client entries when supported clients are present, and runs doctor plus stdio smoke.
 
-### Future PyPI install
+### GitHub fallback install
 
-PyPI is not live yet. Do not use this as the public install path until the package is actually published:
+Use this only if you want the live repo head instead of the latest PyPI release:
 
 ```bash
-pipx install frontend-design-loop-mcp
+pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
 frontend-design-loop-setup --install-all-detected-clients
 ```
 

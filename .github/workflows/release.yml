@@ -39,7 +39,6 @@ jobs:
     environment: pypi
     permissions:
       contents: read
-      id-token: write
     steps:
       - name: Download dist artifacts
         uses: actions/download-artifact@v4
@@ -48,3 +47,7 @@ jobs:
           path: dist
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          skip-existing: true

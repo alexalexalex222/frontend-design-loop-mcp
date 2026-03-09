@@ -9,7 +9,7 @@ Use this file as the source of truth for listing `frontend-design-loop-mcp` on M
 - Current public install:
 
 ```bash
-pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
+pipx install frontend-design-loop-mcp
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
@@ -63,7 +63,7 @@ The repo already includes a whole-page before/after ACA case showing an ugly ear
 ## Install Snippet
 
 ```bash
-pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
+pipx install frontend-design-loop-mcp
 frontend-design-loop-setup --install-all-detected-clients
 ```
 

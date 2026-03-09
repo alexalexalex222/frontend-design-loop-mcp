@@ -19,7 +19,6 @@ Keep the public story narrow and believable:
   - short explanation of how the MCP works in practice
 - `docs/FRONTEND_DESIGN_LOOP_MCP.md` keeps the single-model default explicit
 - public docs do not imply multi-model-by-default behavior
-- public docs do not claim PyPI is live unless it has actually been published
 - public docs do not reintroduce legacy public branding or old repo identities
 
 ## Proof Checklist
@@ -40,16 +39,23 @@ Keep the public story narrow and believable:
 - canonical install snippet uses:
 
 ```bash
+pipx install frontend-design-loop-mcp
+frontend-design-loop-setup --install-all-detected-clients
+```
+
+- GitHub fallback remains available:
+
+```bash
 pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
 frontend-design-loop-setup --install-all-detected-clients
 ```
 
 - `docs/MCP_DIRECTORY_SUBMISSIONS.md` is the source of truth for directory copy
-- PyPI Trusted Publishing is the preferred release path:
+- PyPI release is live. Current preferred maintenance path:
   - workflow file: `.github/workflows/release.yml`
   - GitHub environment: `pypi`
   - PyPI project name: `frontend-design-loop-mcp`
-  - pending publisher values are documented in `RELEASING.md`
+  - automated publish currently uses repo secret `PYPI_TOKEN`
 - submission targets:
   - Glama
   - PulseMCP
@@ -83,5 +89,4 @@ Only switch the public install story after PyPI is actually live:
 2. run the release checklist from `RELEASING.md`
 3. publish to PyPI
 4. verify `pipx install frontend-design-loop-mcp`
-5. update README and docs to make the PyPI install path primary
-6. refresh directory listings with the PyPI install path
+5. refresh directory listings with the PyPI install path
