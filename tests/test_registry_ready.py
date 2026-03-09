@@ -30,6 +30,9 @@ def test_registry_metadata_is_consistent() -> None:
     server = json.loads(SERVER_JSON_PATH.read_text(encoding='utf-8'))
     assert server['name'] == marker
     assert server['version'] == project['version']
+    assert isinstance(server['description'], str)
+    assert server['description'].strip()
+    assert len(server['description']) <= 100
     assert server['repository']['url'] == 'https://github.com/alexalexalex222/frontend-design-loop-mcp'
     assert server['repository']['source'] == 'github'
 

@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.alexalexalex222/frontend-design-loop-mcp",
   "title": "Frontend Design Loop MCP",
-  "description": "Design-first MCP that helps coding agents materially improve websites with screenshot-grounded iteration and proof artifacts.",
+  "description": "Design-first MCP for coding agents that improves websites with screenshot-grounded iteration.",
   "version": "1.0.0",
   "repository": {
     "url": "https://github.com/alexalexalex222/frontend-design-loop-mcp",

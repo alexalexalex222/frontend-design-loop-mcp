@@ -77,6 +77,11 @@ def main() -> None:
         fail('server.json name does not match the README mcp-name marker')
     if server.get('version') != package_version:
         fail('server.json version does not match pyproject project.version')
+    description = server.get('description')
+    if not isinstance(description, str) or not description.strip():
+        fail('server.json description must be a non-empty string')
+    if len(description) > 100:
+        fail('server.json description must be 100 characters or fewer for registry validation')
     if server.get('repository', {}).get('url') != EXPECTED_REPOSITORY:
         fail('server.json repository.url does not match the canonical GitHub repo URL')
     if server.get('repository', {}).get('source') != 'github':

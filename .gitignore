@@ -43,6 +43,7 @@ templates/*/out/
 .handoff/
 .packets/
 .orchestrator/
+.mcpregistry_*
 private/
 prompts/codex_context/
 context-dump/

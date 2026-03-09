@@ -105,12 +105,13 @@ frontend-design-loop-setup --install-gemini
 ## Current Live Status
 
 Status snapshot from 2026-03-09:
-- GitHub repo and PyPI package are live under `frontend-design-loop-mcp`
+- GitHub repo, PyPI package, and official MCP Registry entry are live under `frontend-design-loop-mcp`
 - Glama new-slug page `@alexalexalex222/frontend-design-loop-mcp` still resolves to the legacy `petamind-mcp` listing
 - PulseMCP new-slug page returns `404`
 - MCP Market new-slug page returns `403` from this shell, so browser/manual verification is still pending
 
 Recommended next moves:
+- Official MCP Registry: done
 - Glama: fix or replace the legacy listing so the new slug stops redirecting to `petamind-mcp`
 - PulseMCP: submit or refresh the new listing
 - MCP Market: verify manually in a browser session, then submit or refresh if needed
