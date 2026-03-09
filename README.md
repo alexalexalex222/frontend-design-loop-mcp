@@ -60,23 +60,19 @@ The public proof set uses owned/generated GA SMB previews plus the ACA full-page
 
 <table>
   <tr>
-    <td width="50%" align="center"><img src="docs/images/11-budget-movers-augusta_hero_top_crop.png" alt="11 Budget Movers Augusta hero top crop" width="100%"><br><sub>11 Budget Movers Augusta</sub></td>
-    <td width="50%" align="center"><img src="docs/images/13-peachtree-flooring-atlanta_hero_top_crop.png" alt="13 Peachtree Flooring Atlanta hero top crop" width="100%"><br><sub>13 Peachtree Flooring Atlanta</sub></td>
+    <td align="center"><img src="docs/images/11-budget-movers-augusta_hero_top_crop.png" alt="11 Budget Movers Augusta hero top crop"><br><sub>11 Budget Movers Augusta</sub></td>
+    <td align="center"><img src="docs/images/13-peachtree-flooring-atlanta_hero_top_crop.png" alt="13 Peachtree Flooring Atlanta hero top crop"><br><sub>13 Peachtree Flooring Atlanta</sub></td>
+    <td align="center"><img src="docs/images/19-tnt-cabinets-columbus_hero_top_crop.png" alt="19 TNT Cabinets Columbus hero top crop"><br><sub>19 TNT Cabinets Columbus</sub></td>
   </tr>
   <tr>
-    <td width="50%" align="center"><img src="docs/images/19-tnt-cabinets-columbus_hero_top_crop.png" alt="19 TNT Cabinets Columbus hero top crop" width="100%"><br><sub>19 TNT Cabinets Columbus</sub></td>
-    <td width="50%" align="center"><img src="docs/images/21-henry-plumbing-savannah_hero_top_crop.png" alt="21 Henry Plumbing Savannah hero top crop" width="100%"><br><sub>21 Henry Plumbing Savannah</sub></td>
+    <td align="center"><img src="docs/images/21-henry-plumbing-savannah_hero_top_crop.png" alt="21 Henry Plumbing Savannah hero top crop"><br><sub>21 Henry Plumbing Savannah</sub></td>
+    <td align="center"><img src="docs/images/22-silverback-electric-savannah_hero_top_crop.png" alt="22 Silverback Electric Savannah hero top crop"><br><sub>22 Silverback Electric Savannah</sub></td>
+    <td align="center"><img src="docs/images/25-robins-body-paint-warner-robins_hero_top_crop.png" alt="25 Robins Body and Paint Warner Robins hero top crop"><br><sub>25 Robins Body &amp; Paint Warner Robins</sub></td>
   </tr>
   <tr>
-    <td width="50%" align="center"><img src="docs/images/22-silverback-electric-savannah_hero_top_crop.png" alt="22 Silverback Electric Savannah hero top crop" width="100%"><br><sub>22 Silverback Electric Savannah</sub></td>
-    <td width="50%" align="center"><img src="docs/images/25-robins-body-paint-warner-robins_hero_top_crop.png" alt="25 Robins Body and Paint Warner Robins hero top crop" width="100%"><br><sub>25 Robins Body &amp; Paint Warner Robins</sub></td>
-  </tr>
-  <tr>
-    <td width="50%" align="center"><img src="docs/images/34-proof-roofing-services-gainesville_hero_top_crop.png" alt="34 Proof Roofing Services Gainesville hero top crop" width="100%"><br><sub>34 Proof Roofing Services Gainesville</sub></td>
-    <td width="50%" align="center"><img src="docs/images/45-metro-storage-columbus_hero_top_crop.png" alt="45 Metro Storage Columbus hero top crop" width="100%"><br><sub>45 Metro Storage Columbus</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="docs/images/47-miller-light-construction-commerce_hero_top_crop.png" alt="47 Miller Light Construction Commerce hero top crop" width="78%"><br><sub>47 Miller Light Construction Commerce</sub></td>
+    <td align="center"><img src="docs/images/34-proof-roofing-services-gainesville_hero_top_crop.png" alt="34 Proof Roofing Services Gainesville hero top crop"><br><sub>34 Proof Roofing Services Gainesville</sub></td>
+    <td align="center"><img src="docs/images/45-metro-storage-columbus_hero_top_crop.png" alt="45 Metro Storage Columbus hero top crop"><br><sub>45 Metro Storage Columbus</sub></td>
+    <td align="center"><img src="docs/images/47-miller-light-construction-commerce_hero_top_crop.png" alt="47 Miller Light Construction Commerce hero top crop"><br><sub>47 Miller Light Construction Commerce</sub></td>
   </tr>
 </table>
 
