@@ -64,6 +64,7 @@ frontend-design-loop-setup --install-all-detected-clients
 Current external status as of 2026-03-09:
 - GitHub raw repo docs are live, PyPI is live at `frontend-design-loop-mcp`, and the official MCP Registry entry is now active
 - Glama new-slug URL still resolves to the legacy `petamind-mcp` listing
+- Glama correction issue is filed at `punkpeye/awesome-mcp-servers#2986`
 - PulseMCP new-slug URL returns `404`
 - MCP Market new-slug URL returns `403` from this shell, so browser/manual verification is still required
 
