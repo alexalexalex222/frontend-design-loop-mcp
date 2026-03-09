@@ -26,15 +26,13 @@ This is the kind of proof the product needs: not a tiny hero tweak, but a whole-
 
 - Before state: real full-page capture from `35-rockosbodyshop.com`, preserved from the GA SMB proof bundle captured on 2026-02-25.
 - After state: full-page capture recreated on 2026-03-08 from `35-rockos-body-shop-warner-robins/v5-gemini-real-top3-upgrade/`.
-- The shipped desktop gate proof for the rebuilt page also exists at `ga-smb-leads/.handoff/assets/2026-03-08_real_top3_gemini_upgrade/final_real_top3_proof/site35/home-desktop-1512x812.png`.
 
 ## Source build provenance
 
 - Source folder: `35-rockos-body-shop-warner-robins/v5-gemini-real-top3-upgrade/`
-- Builder packet: `ga-smb-leads/.packets/TASK_2026-03-08_real_top3_gemini_upgrade_site_35.md`
 - Source lane: Gemini builder lane
 - Stored source manifest model: `gemini-3.1-pro-preview`
-- Stored source handoff: `ga-smb-leads/.handoff/HANDOFF_2026-03-08_real_top3_gemini_upgrade_site_35_20260308-0010.md`
+- Build provenance is preserved in the private source workspace; the public repo keeps the proof images and the equivalent MCP call instead of internal handoff paths.
 
 ## Equivalent Design Call
 

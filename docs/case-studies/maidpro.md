@@ -26,17 +26,16 @@ This is the AI-generated-to-materially-better case study. It shows the differenc
 
 - Before state: the original weak AI-generated root page from `37-maidpro-marietta/index.html`, captured as a full-page proof on 2026-03-08.
 - After state: the rebuilt `37-maidpro-marietta/v2/` page, captured as a full-page proof on 2026-03-08.
-- Supporting live-site evidence from the original outreach run exists at `ga-smb-leads/.handoff/assets/2026-03-05_nextlead_37_maidpro_marietta/real_site_screens/maidpro-marietta-live-desktop-1512x812.png`, but the live page hit a Cloudflare verification screen, so the strongest honest headline proof here is root generated before -> rebuilt after.
+- The original live-site outreach capture hit a Cloudflare verification screen, so the strongest honest headline proof here is root generated before -> rebuilt after.
 
 ## Source build provenance
 
 - Source before folder: `37-maidpro-marietta/`
 - Source after folder: `37-maidpro-marietta/v2/`
-- Builder packet: `ga-smb-leads/.packets/TASK_2026-03-05_nextlead_37_maidpro_marietta_builder.md`
-- Stored source handoff: `ga-smb-leads/.handoff/HANDOFF_2026-03-05_nextlead_37_maidpro_marietta_orchestrator_20260305-135510.md`
 - Stored source manifest model: `gpt-5`
 - Stored source manifest provider: not separately persisted in that handoff
 - Frontend lane target in the planning packet: screenshot-first build with Gemini 3.1 Pro
+- Build provenance is preserved in the private source workspace; the public repo keeps the proof images and the equivalent MCP call instead of internal handoff paths.
 
 ## Equivalent Design Call
 
