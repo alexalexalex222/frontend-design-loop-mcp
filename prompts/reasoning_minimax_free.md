@@ -28,6 +28,11 @@ UI / LANDING PAGE MANDATES:
 - If you add a section below the hero, it must not collapse into three equal cards. Use a comparison rail, proof wall, staggered stack, layered bento, or another non-template structure.
 - Across the whole page, allow at most one uniform card-grid section. Every other section must change the rhythm or information density.
 - Dark themes must have depth: base gradient, one light source or texture/grid moment, glass/surface treatment, and one accent system.
+- Premium dark work should feel cinematic, not neon. Favor low-saturation surfaces, restrained accents, and smooth tonal blending over high-chroma spikes.
+- Prefer monochromatic intensity, smoked metals, muted reds, graphite, obsidian, gunmetal, ash, or soft ember accents unless the brief explicitly demands louder color.
+- Avoid acid-lime, electric-magenta, or arbitrary high-saturation accent jumps unless the brief specifically calls for that look.
+- Smoothness matters: gradients, shadows, and glow transitions should feel blended and atmospheric instead of harsh or posterized.
+- If the composition needs signature mass, layered geometry, or dense DOM/CSS to feel premium, write the full structure. Do not shrink the page just to look efficient.
 - Typography must create hierarchy on its own. Use one emphasized phrase/span or structural type contrast instead of uniform text blocks.
 - If the page is meant to feel operational or infrastructure-grade, the copy and visuals must reflect monitoring, control, proof, uptime, flow, routing, or orchestration.
 - CTA hierarchy must stay strong on mobile too: one dominant primary action, lighter secondary action, and no cramped row of equal-weight pills.

@@ -97,6 +97,8 @@ UI EXECUTION FLOOR (apply ONLY when the goal/context indicates website, landing 
 - If the hero uses a terminal, dashboard, or command-center artifact, add a second distinct proof/control section deeper in the page instead of stopping at one signature move and then falling back to a generic card grid.
 - Across the page, allow at most one uniform card-grid section. The rest of the composition must vary rhythm, density, or section type.
 - Dark themes need layers: base gradient, one lighting moment, one surface treatment, and one accent system. Flat navy is not enough.
+- High-end pages are allowed to be structurally dense. Do not compress the page just to keep it short.
+- If the composition needs layered geometry, extended DOM structure, or deeper CSS scaffolding, write the real structure instead of faking overlap with a few shallow blocks.
 - Keep the above-the-fold state decisive: headline, CTA cluster, proof/trust signal, and the signature artifact must read immediately on desktop and mobile.
 - Make typography do real work. Use contrast in weight, scale, and treatment, not just larger text.
 - Mobile CTA clusters need hierarchy too: one dominant action, lighter secondary action, and no cramped row of equal-weight pills.
@@ -312,8 +314,8 @@ def _kilo_temperature_schedule(max_candidates: int) -> list[float]:
 def _patch_generator_timeout_s(provider_name: str, model: str, *, max_candidates: int) -> float | None:
     if _is_kilo_minimax_lane(provider_name, model):
         if int(max_candidates or 1) > 1:
-            return 360.0
-        return 420.0
+            return 1200.0
+        return 1500.0
     return None
 
 
@@ -385,9 +387,9 @@ def _tune_host_cli_defaults(
     tuning_notes.append("kilo_minimax_patch_generator_variant=high")
 
     if int(max_candidates or 1) > 1:
-        tuning_notes.append("kilo_minimax_patch_timeout=360s_multi_candidate")
+        tuning_notes.append("kilo_minimax_patch_timeout=1200s_multi_candidate")
     else:
-        tuning_notes.append("kilo_minimax_patch_timeout=420s_single_candidate")
+        tuning_notes.append("kilo_minimax_patch_timeout=1500s_single_candidate")
     tuning_notes.append("kilo_minimax_optional_polish=banded (skip passers; salvage only near-threshold)")
 
     return (

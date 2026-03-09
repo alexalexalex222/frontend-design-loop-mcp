@@ -504,7 +504,7 @@ def test_frontend_design_loop_solve_host_cli_auto_tunes_kilo_defaults(tmp_path: 
     assert request_payload["temperature_schedule"] == [0.45, 0.82]
     assert "kilo_minimax_default_planner=codex_cli/gpt-5.4 single" in request_payload["runtime_tuning_notes"]
     assert "kilo_minimax_patch_generator_variant=high" in request_payload["runtime_tuning_notes"]
-    assert "kilo_minimax_patch_timeout=360s_multi_candidate" in request_payload["runtime_tuning_notes"]
+    assert "kilo_minimax_patch_timeout=1200s_multi_candidate" in request_payload["runtime_tuning_notes"]
     assert (
         "kilo_minimax_optional_polish=banded (skip passers; salvage only near-threshold)"
         in request_payload["runtime_tuning_notes"]
