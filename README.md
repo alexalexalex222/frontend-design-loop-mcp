@@ -33,6 +33,25 @@ frontend_design_loop_design(
 )
 ```
 
+## Agent-Owned Toolkit Variant
+
+This repo now also ships an additive MCP entrypoint for agent-owned frontend loops:
+
+- console script: `frontend-design-toolkit-mcp`
+- module fallback: `PYTHONPATH=src .venv/bin/python -m design_toolkit.server`
+
+That variant is intentionally narrow:
+- `get_playbook`
+- `build_context`
+- `run_gates`
+- `preview_start`
+- `capture_screenshots`
+- `preview_stop`
+
+It does not hide vision scoring, creativity judging, or patch generation behind MCP. The host agent owns planning, edits, screenshot review, scoring, iteration, and winner selection directly.
+
+See [test-prompt-codex.md](test-prompt-codex.md) for the end-to-end Codex exercise prompt.
+
 ## What The MCP Does
 
 `frontend_design_loop_design` is the main workflow:

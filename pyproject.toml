@@ -64,6 +64,7 @@ dev = [
 [project.scripts]
 frontend-design-loop-mcp = "frontend_design_loop_mcp.mcp_server:main"
 frontend-design-loop-setup = "frontend_design_loop_mcp.setup:main"
+frontend-design-toolkit-mcp = "design_toolkit.server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -71,6 +72,8 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = [
+    "design_toolkit",
+    "design_toolkit.*",
     "frontend_design_loop_mcp",
     "frontend_design_loop_mcp.*",
     "frontend_design_loop_core",
@@ -78,6 +81,7 @@ include = [
 ]
 
 [tool.setuptools.package-data]
+design_toolkit = ["playbooks/*.md"]
 frontend_design_loop_mcp = [
     "assets/config/*.yaml",
     "assets/prompts/*",
