@@ -245,7 +245,7 @@ def test_eval_patch_rejects_shell_commands_by_default(tmp_path: Path) -> None:
         return await mcp_code_server._frontend_design_loop_eval_impl(
             repo_path=str(repo),
             patches=[{"path": "hello.txt", "patch": "@@ -1,1 +1,1 @@\n-hello\n+hello shell\n"}],
-            test_command="printf ok >/dev/null",
+            test_command="echo ok && echo done",
         )
 
     with pytest.raises(ValueError, match="unsafe_shell_commands=true"):
@@ -293,7 +293,7 @@ def test_eval_patch_allows_shell_commands_with_opt_in(tmp_path: Path, monkeypatc
         return await mcp_code_server._frontend_design_loop_eval_impl(
             repo_path=str(repo),
             patches=[{"path": "hello.txt", "patch": "@@ -1,1 +1,1 @@\n-hello\n+hello shell ok\n"}],
-            test_command="printf ok >/dev/null",
+            test_command="echo ok && echo done",
             vision_provider="client",
             unsafe_shell_commands=True,
         )

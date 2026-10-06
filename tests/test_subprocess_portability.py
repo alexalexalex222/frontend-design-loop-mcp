@@ -150,7 +150,7 @@ async def test_real_preview_stops_and_releases_its_port(tmp_path):
                     response = await client.get(f"http://127.0.0.1:{port}/")
                     assert response.status_code == 200
                     break
-                except httpx.ConnectError:
+                except (httpx.ConnectError, httpx.TimeoutException):
                     await asyncio.sleep(0.1)
             else:
                 pytest.fail("preview never became ready")

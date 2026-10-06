@@ -32,7 +32,7 @@ def test_automated_selection_preserves_legacy_flag(monkeypatch, capsys):
     setup_mod.main(["--workflow", "automated", "--print-config"])
     payload = json.loads(capsys.readouterr().out)["mcpServers"]["frontend-design-loop-mcp"]
     assert payload["args"] == ["-m", "frontend_design_loop_mcp.mcp_server"]
-    assert payload["env"]["FRONTEND_DESIGN_LOOP_CONFIG_PATH"] == "/project/config.yaml"
+    assert payload["env"]["FRONTEND_DESIGN_LOOP_CONFIG_PATH"] == str(Path("/project/config.yaml"))
 
 
 def test_codex_windows_paths_and_quoted_name_round_trip(tmp_path, monkeypatch):
@@ -178,7 +178,7 @@ def test_doctor_no_cli_is_optional_and_no_auth_or_inference(monkeypatch, capsys)
     ],
 )
 def test_auth_probes_classify_without_echoing_accounts(monkeypatch, cli, response, status):
-    monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: "/bin/" + name)
+    monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: setup_mod.sys.executable)
     calls = []
     monkeypatch.setattr(
         setup_mod.subprocess, "run", lambda command, **kw: calls.append((command, kw)) or response
@@ -191,7 +191,7 @@ def test_auth_probes_classify_without_echoing_accounts(monkeypatch, cli, respons
 
 
 def test_auth_probe_unrecognized_output_stays_unknown(monkeypatch):
-    monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: "found")
+    monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: setup_mod.sys.executable)
     monkeypatch.setattr(
         setup_mod.subprocess,
         "run",
