@@ -1,97 +1,129 @@
 # Troubleshooting
 
-## `frontend-design-loop-setup --check` fails
+## Browser missing or launch fails
 
-Run:
+Run `frontend-design-loop-setup` in the same Python environment that launches your
+server. It installs Chromium, not client configs. `--check` launches Chromium and
+checks a local page in that environment. On Linux, install the system
+browser libraries required by Playwright using your administrator's normal workflow
+(`python -m playwright install --with-deps chromium` may require system privileges).
 
-```bash
-frontend-design-loop-setup
+Use `--doctor` for read-only checks. The toolkit needs no provider CLI or credentials.
+`--auth-check` opts into CLI status probes, never login or model inference. Installed,
+authenticated, and usable model access are separate states; OpenCode credential-list
+output cannot establish the effective route of a particular provider/model.
+
+## Client cannot find the server
+
+Print fresh configs from the installed environment using `--print-config` or
+`--print-codex-config`, `--print-claude-config`, `--print-opencode-config`.
+They use an absolute interpreter path. Keep the environment at that path and restart
+the client. Use `--workflow automated` only when you want the automated loop module.
+Both console entrypoints also support `--version`. If the client has an existing
+entry with `enabled = false`, restarting will not activate it. Inspect and enable
+that specific entry when you want to use it; setup preserves existing settings.
+
+Windows fallback launches:
+
+```text
+<venv>\Scripts\python.exe -m design_toolkit.server
+<venv>\Scripts\python.exe -m frontend_design_loop_mcp.mcp_server
 ```
 
-That installs Playwright Chromium for the current environment.
+This also avoids the observed `uv trampoline failed to canonicalize script path`
+launcher problem. Windows command paths are escaped in generated JSON/TOML. Prefer
+argv arrays for test/preview commands rather than shell text. Git is required for
+automated worktree flows, not static toolkit screenshot capture.
 
-If you want the full environment summary:
+Windows command strings follow Microsoft C runtime argument rules: use double
+quotes around paths with spaces. Single quotes remain literal. An argv array
+avoids quoting entirely, including embedded quotes and trailing backslashes.
+Native `.exe`/`.com` commands and recognized npm-generated Node launchers are
+supported. Custom batch wrappers fail with an explicit error; supply their native
+executable or Node script as argv instead. Commands resolve against the child
+environment's PATH and PATHEXT.
 
-```bash
-frontend-design-loop-setup --doctor
+Source snapshots record actual checkout bytes separately from Git's normalized
+blobs and modes. CRLF normalization and `core.symlinks=false` do not require
+altering the developer's index or repository settings. Delivered patches include
+any byte or type changes needed to reproduce the inspected candidate exactly.
+
+## Existing client entry is refused
+
+An unmanaged entry is left intact. Choose `--server-name` or merge the printed
+configuration yourself after inspecting the existing entry. Invalid JSON/TOML is
+not replaced. JSONC installation preserves values but removes comments/formatting;
+print and merge manually when comment preservation matters.
+
+## Preview does not start or is rejected
+
+Use the actual project preview command, an existing cwd, and `{port}`. The toolkit
+sets PORT and refuses a busy port. HTTP 404/5xx is not readiness. Launch failures
+return bounded drained logs. Loopback URLs and document navigation must stay at the
+requested origin; public URLs and redirects to another port are rejected. Remote
+assets may still load. A sandbox denying socket binds/browser execution cannot
+verify a preview; rerun in an environment with those permissions.
+
+The preview command must stay in the foreground. Commands that start a daemon
+and immediately exit cannot give the toolkit ownership of that detached process.
+Use the framework's foreground mode and inspect the returned launch logs.
+For Astro 7.3.5, agent detection can start a background server even without an
+explicit `--background`; `--ignore-lock` keeps this isolated preview in the
+foreground:
+
+```text
+["npm", "run", "dev", "--", "--port", "{port}", "--host", "127.0.0.1", "--ignore-lock"]
 ```
 
-## MCP server starts but tool calls fail to import local files
+If a prior attempt daemonized, use `astro dev status` and `astro dev stop` from
+that exact project to reconcile its server. Do not stop another project's preview.
 
-For a local clone, make sure the MCP config points at:
-- `-m frontend_design_loop_mcp.mcp_server`
-- `FRONTEND_DESIGN_LOOP_CONFIG_PATH=<repo>/config/config.yaml`
+For Vite, use `npm run dev -- --host 127.0.0.1 --port {port}`. For Next.js,
+build the project first and preview with `npm run start -- --port {port}` (where
+`start` is `next start`). The validation fixtures exercised Vite 8.3.2, Astro
+7.3.5, and Next.js 16.3.8 with actual desktop/mobile form and route interactions.
+These checks establish the tested commands, not every framework configuration.
 
-Legacy migration env vars still work:
+On this host, Next.js 16.3.8 dev HMR/hydration failed under the default server
+binding even when the page returned HTTP 200. Explicitly binding the server to
+IPv4 allowed the interactions to run:
+`npm run dev -- --port {port} --hostname 127.0.0.1`. Keep PostCSS configuration
+inside the project; an inherited parent config can break an isolated fixture.
 
-If you want the tool to emit the exact config for your client instead of editing by hand:
+For client-rendered controls, start the interaction list with `expect_visible` on
+an application-provided ready state, or keep controls disabled until initialized.
+Visible server-rendered markup does not prove its client handler is ready.
 
-```bash
-frontend-design-loop-setup --install-all-detected-clients
-frontend-design-loop-setup --print-claude-config
-frontend-design-loop-setup --print-codex-config
-frontend-design-loop-setup --print-gemini-config
-frontend-design-loop-setup --print-droid-config
-frontend-design-loop-setup --print-opencode-config
-```
+Only returned preview PIDs are owned. `preview_stop` rejects arbitrary PIDs. It
+terminates the preview process tree, not unrelated applications. If the MCP is
+abruptly killed by the operating system, inspect the actual process yourself before
+terminating it; normal toolkit shutdown performs cleanup.
 
-## I want repo-local artifacts, not user app-data artifacts
+On Windows, each command runs through a small owned Python host which joins an
+anonymous Job Object before creating the target. Descendants stay in that Job
+even if the target exits first. A Job or launch failure returns an error before
+the runner hands back a process; it does not proceed without ownership. The
+returned PID belongs to the invocation host. POSIX commands own process groups.
 
-For a local clone, Frontend Design Loop uses repo `out/` automatically when it detects:
-- `config/config.yaml`
-- `templates/nextjs_app_router_tailwind`
-- `prompts/`
+## Tests or interactions say skipped/not_run
 
-You can also force the path:
+That is unverified, not success. Supply the project's actual test/lint commands or
+requested selector-based interactions. The toolkit does not invent a Python test
+suite from pyproject.toml. Each viewport starts fresh; desktop controls may differ
+from mobile, requiring separate captures. A click alone proves execution, so add
+expect_visible/expect_text for the result you need.
 
-```bash
-export FRONTEND_DESIGN_LOOP_MCP_OUT_DIR="$HOME/frontend-design-loop-mcp-runs"
-```
+## Images are missing from the client
 
-## I only want host-agent mode
+Check manifest status and image paths. `include_images=false` deliberately returns
+no image blocks; a bounded response can omit later images. Some MCP clients/models
+do not support images. Use a vision-capable host and local image reading when
+available. Missing evidence leaves visual review pending. Manifests and paths are
+not equivalent to inspected images.
 
-Use:
-- `frontend_design_loop_eval`
-- `vision_provider=client`
+## Cloud provider import fails
 
-That path requires no cloud/provider credentials.
-
-## My custom command or preview URL is rejected
-
-This is the secure default.
-
-- `test_command`, `lint_command`, and `preview_command` run as shell-free argv by default
-- shell operators like `>`, `|`, `&&`, `;`, backticks, and `$()` require `unsafe_shell_commands=true`
-- inline interpreter/code execution like `bash -c`, `sh -c`, `python -c`, and `node -e` also require `unsafe_shell_commands=true`
-- `preview_url` must target `localhost`, `127.0.0.1`, or `::1` unless `unsafe_external_preview=true`
-- auto-context will ignore common secret-bearing paths like `.env*`, `.git/`, `.ssh/`, `.aws/`, `.config/gcloud/`, `.docker/`, and `.kube/`
-- native CLI providers inherit a minimal allowlisted env; if a CLI truly needs extra auth/config vars, pass them explicitly instead of relying on ambient shell state
-
-If you intentionally need shell syntax or a non-local preview target, opt in explicitly in the MCP call instead of relying on implicit shell behavior.
-
-## My automated vision lane says `proxy_structural`
-
-That is expected for MiniMax proxy-only lanes such as:
-- `kilo_cli`
-- `droid_cli` on MiniMax
-- `opencode_cli` on MiniMax
-
-Those lanes are treated as structural render-health checks only. They do not count as full automated visual scoring, so:
-- `vision_scored=false`
-- `vision_pending=true`
-- `final_pass=null`
-
-If you want the host agent to judge screenshots, use `vision_provider=client`.
-
-## I need a quick proof that the repo works
-
-```bash
-PYTHONPATH=src .venv/bin/python scripts/preflight_check.py
-PYTHONPATH=src .venv/bin/python scripts/smoke_mcp_stdio.py
-```
-
-Or use the built-in doctor from the repo checkout:
-
-```bash
-.venv/bin/frontend-design-loop-setup --doctor --smoke
-```
+Install this checkout with `python -m pip install '.[cloud]'` in the server environment
+when selecting cloud adapters. Native CLI/toolkit installs should not require that
+extra. Selecting a provider does not authorize login/account or default-provider
+changes; configure only the requested route and check current CLI support.

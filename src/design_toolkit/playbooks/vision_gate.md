@@ -1,103 +1,29 @@
-# Vision Gate Playbook - Agent-Owned Screenshot Review
+# Evidence-grounded visual review
 
-Use screenshots to review the page yourself. Do not call an external evaluator through MCP.
+Inspect the images you actually received, with their viewport and state labels.
+Assess audience fit, hierarchy, typography, spacing, image/content fit, responsive
+composition, and whether the main action is understandable. Review the visible
+strengths as well as weaknesses. Reference the exact image or interaction state
+for consequential findings; separate observation, inferred cause, and taste.
 
-The agent is the judge.
+Use the baseline for improvement claims. Without a baseline, absolute assessment
+is possible but comparative claims remain unverified. Missing or unreadable images
+are an evidence error, not proof of poor design. Functional checks and aesthetic
+judgments remain separate: a screenshot cannot prove keyboard access or successful
+submission. Caller labels are not verified source identity.
 
----
+A useful review records:
+- evidence inspected and missing;
+- supported strengths, blockers, and refinements, with impact and confidence;
+- functional checks as passed/failed/skipped/not_run/error;
+- visual judgment as supported, uncertain, or unreviewed;
+- an explicit rationale for acceptance against the user's actual requirements.
 
-## The Loop
+A numerical score is optional. If used, define its scale and uncertainty; avoid
+hidden generic-design caps or universal thresholds. An author's self-review is not
+independent review. For consequential uncertainty, ask an authorized separate
+reviewer to inspect the same brief and images. Judge failure leaves review pending.
 
-For each candidate that is ready for visual review:
-
-```text
-1. preview_start(command, cwd)
-2. capture_screenshots(url)
-3. inspect the screenshots yourself
-4. score the result yourself
-5. preview_stop(pid)
-```
-
-If the score is below threshold, fix the page and repeat.
-
----
-
-## Review Rubric
-
-Score each category from `0.0` to `2.0`.
-
-1. Craft and polish
-2. Hierarchy and usability
-3. Cohesive art direction
-4. Content quality
-5. Creative signature
-
-Total score = sum of all five categories.
-
-### Hard scoring rules
-
-- If the page is broken, unusable, blank, or obviously busted: fail immediately.
-- If the page is clean but generic: cap at `7.5`.
-- If the page takes a strong tasteful risk that works: allow `8.5-10.0`.
-- Do not reward decorative gradients alone as creativity.
-
----
-
-## Review Output Format
-
-Write your review in this shape:
-
-```json
-{
-  "score": 0.0,
-  "pass": false,
-  "broken": false,
-  "issues": ["..."],
-  "highlights": ["..."],
-  "fix_suggestions": ["..."]
-}
-```
-
-This is not an MCP response. This is your own reasoning artifact.
-
----
-
-## Broken Detection
-
-Mark `broken=true` when you see:
-- runtime overlay
-- 404 / error page
-- blank page
-- missing CSS that makes the page unusable
-- obvious layout collapse
-
-If broken:
-1. stop judging aesthetics
-2. fix the root cause
-3. rerun gates if needed
-4. capture fresh screenshots
-
----
-
-## Fix Strategy
-
-When the page renders but scores low:
-- fix only the weak areas first
-- prefer layout, hierarchy, spacing, contrast, and CTA clarity changes
-- if the page is structurally healthy but forgettable, add one signature move
-- do not rewrite the whole file unless the problem is global
-
----
-
-## Max Fix Rounds
-
-- Default: 2 focused visual fix rounds per candidate
-- If score improvement is less than `0.5` after a full round, stop and pick the best realistic state
-
----
-
-## Threshold Guidance
-
-- `>= 8.0`: good enough to ship if no major issues remain
-- `9.0+`: excellent
-- `< 8.0`: iterate unless time or scope makes that irrational
+Fix the largest supported weakness, verify the proposed cause in source, capture
+fresh evidence, and compare against the best preserved state. Stop when the brief
+is fulfilled or another pass has no identifiable benefit within scope.

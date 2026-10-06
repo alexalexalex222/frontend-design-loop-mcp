@@ -8,7 +8,6 @@ import anyio
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = REPO_ROOT / "src"
 EXPECTED_TOOLS = {
@@ -18,6 +17,7 @@ EXPECTED_TOOLS = {
     "preview_start",
     "capture_screenshots",
     "preview_stop",
+    "review_design",
 }
 EXPECTED_RESOURCES = {
     "playbook://solve",

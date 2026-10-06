@@ -1,397 +1,249 @@
+"""Setup configuration safety and honest doctor regressions."""
+
 import json
-import pytest
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from frontend_design_loop_mcp import setup as setup_mod
 
 
-def test_setup_check_exits_zero_when_playwright_ready(monkeypatch, capsys) -> None:
+@pytest.fixture(autouse=True)
+def toolkit(monkeypatch):
+    monkeypatch.setattr(setup_mod, "_WORKFLOW", "toolkit")
+
+
+def test_default_generic_config_is_toolkit_and_read_only(monkeypatch, capsys):
     monkeypatch.setattr(
         setup_mod,
-        "_check_playwright_ready",
-        lambda: (True, "Playwright Chromium ready at /tmp/chromium"),
+        "_ensure_playwright_ready",
+        lambda: pytest.fail("printed configs must not download"),
     )
-
-    setup_mod.main(["--check"])
-
-    out = capsys.readouterr().out
-    assert "Playwright Chromium ready" in out
-
-
-def test_setup_check_exits_nonzero_when_playwright_missing(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(
-        setup_mod,
-        "_check_playwright_ready",
-        lambda: (False, "Playwright Chromium is not installed"),
-    )
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--check"])
-
-    assert exc_info.value.code == 1
-    out = capsys.readouterr().out
-    assert "not installed" in out
+    setup_mod.main(["--print-config"])
+    data = json.loads(capsys.readouterr().out)
+    payload = data["mcpServers"]["frontend-design-toolkit"]
+    assert payload == {"command": setup_mod.sys.executable, "args": ["-m", "design_toolkit.server"]}
 
 
-def test_setup_print_claude_config_outputs_json_and_command(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-    monkeypatch.setattr(setup_mod.sys, "executable", "/tmp/python")
-
-    setup_mod.main(["--print-claude-config"])
-
-    out = capsys.readouterr().out
-    assert '"command": "frontend-design-loop-mcp"' in out
-    assert "claude mcp add-json --scope user frontend-design-loop-mcp" in out
-
-
-def test_setup_print_claude_config_uses_repo_python_for_checkout(monkeypatch, capsys) -> None:
+def test_automated_selection_preserves_legacy_flag(monkeypatch, capsys):
     monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: True)
-    monkeypatch.setattr(setup_mod.sys, "executable", "/repo/.venv/bin/python")
-    monkeypatch.setattr(setup_mod, "get_default_config_path", lambda: Path("/repo/config/config.yaml"))
-
-    setup_mod.main(["--print-claude-config"])
-
-    out = capsys.readouterr().out
-    assert '"/repo/.venv/bin/python"' in out
-    assert '"FRONTEND_DESIGN_LOOP_CONFIG_PATH": "/repo/config/config.yaml"' in out
-
-
-def test_setup_install_claude_invokes_cli_and_doctor(monkeypatch) -> None:
-    calls: list[list[str]] = []
-    doctor_calls: list[bool] = []
-
-    monkeypatch.setattr(setup_mod.shutil, "which", lambda name: "/usr/bin/claude" if name == "claude" else None)
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    def fake_run(cmd, check, **kwargs):
-        calls.append(cmd)
-        return None
-
-    monkeypatch.setattr(setup_mod.subprocess, "run", fake_run)
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--install-claude", "--scope", "user"])
-
-    assert exc_info.value.code == 0
-    assert calls == [
-        [
-            "claude",
-            "mcp",
-            "add-json",
-            "--scope",
-            "user",
-            "frontend-design-loop-mcp",
-            '{"command":"frontend-design-loop-mcp","args":[]}',
-        ]
-    ]
-    assert doctor_calls == [False]
-
-
-def test_setup_doctor_runs_without_installing_playwright(monkeypatch) -> None:
-    doctor_calls: list[bool] = []
-    ensured: list[bool] = []
-
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: ensured.append(True))
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--doctor"])
-
-    assert exc_info.value.code == 0
-    assert doctor_calls == [False]
-    assert ensured == []
-
-
-def test_setup_doctor_smoke_skip_is_nonfatal(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(setup_mod, "_check_playwright_ready", lambda: (True, "ready"))
-    monkeypatch.setattr(setup_mod, "get_default_config_path", lambda: Path("/tmp/config.yaml"))
-    monkeypatch.setattr(setup_mod, "get_default_prompts_path", lambda: Path("/tmp/prompts"))
-    monkeypatch.setattr(setup_mod, "get_default_template_path", lambda: Path("/tmp/templates"))
-    monkeypatch.setattr(setup_mod, "get_default_out_dir", lambda: Path("/tmp/out"))
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-    monkeypatch.setattr(setup_mod.shutil, "which", lambda name: None)
-    monkeypatch.setattr(setup_mod.Path, "exists", lambda self: True)
-    monkeypatch.setattr(setup_mod, "_run_smoke", lambda: False)
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--doctor", "--smoke"])
-
-    assert exc_info.value.code == 0
-    out = capsys.readouterr().out
-    assert "skipped outside repo checkout" in out
-
-
-def test_setup_print_codex_config_outputs_managed_block(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    setup_mod.main(["--print-codex-config"])
-
-    out = capsys.readouterr().out
-    assert "[mcp_servers.frontend-design-loop-mcp]" in out
-    assert 'command = "frontend-design-loop-mcp"' in out
-    assert "managed block" in out
-
-
-def test_setup_install_codex_writes_managed_block_and_runs_doctor(tmp_path, monkeypatch) -> None:
-    config_path = tmp_path / "config.toml"
-    config_path.write_text('model = "gpt-5.4"\n', encoding="utf-8")
-    doctor_calls: list[bool] = []
-
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--install-codex", "--codex-config-path", str(config_path)])
-
-    assert exc_info.value.code == 0
-    text = config_path.read_text(encoding="utf-8")
-    assert 'model = "gpt-5.4"' in text
-    assert "[mcp_servers.frontend-design-loop-mcp]" in text
-    assert 'command = "frontend-design-loop-mcp"' in text
-    assert doctor_calls == [False]
-
-
-def test_setup_install_codex_refuses_unmanaged_existing_block(tmp_path) -> None:
-    config_path = tmp_path / "config.toml"
-    config_path.write_text(
-        "[mcp_servers.frontend-design-loop-mcp]\ncommand = \"existing\"\n",
-        encoding="utf-8",
-    )
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod._install_codex_config("frontend-design-loop-mcp", config_path)
-
-    assert "unmanaged" in str(exc_info.value)
-
-
-def test_setup_print_gemini_config_outputs_json(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    setup_mod.main(["--print-gemini-config"])
-
-    out = capsys.readouterr().out
-    assert '"mcpServers"' in out
-    assert '"frontend-design-loop-mcp"' in out
-    assert '"command": "frontend-design-loop-mcp"' in out
-
-
-def test_setup_install_gemini_updates_settings_and_runs_doctor(tmp_path, monkeypatch) -> None:
-    settings_path = tmp_path / "settings.json"
-    settings_path.write_text(json.dumps({"general": {"model": "gemini-3.1-pro-preview"}}), encoding="utf-8")
-    doctor_calls: list[bool] = []
-
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--install-gemini", "--gemini-settings-path", str(settings_path)])
-
-    assert exc_info.value.code == 0
-    data = json.loads(settings_path.read_text(encoding="utf-8"))
-    assert data["general"]["model"] == "gemini-3.1-pro-preview"
-    assert data["mcpServers"]["frontend-design-loop-mcp"]["command"] == "frontend-design-loop-mcp"
-    assert doctor_calls == [False]
-
-
-def test_setup_print_droid_config_outputs_json(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    setup_mod.main(["--print-droid-config"])
-
-    out = capsys.readouterr().out
-    assert '"mcpServers"' in out
-    assert '"type": "stdio"' in out
-    assert '"command": "frontend-design-loop-mcp"' in out
-
-
-def test_setup_install_droid_updates_mcp_json_and_runs_doctor(tmp_path, monkeypatch) -> None:
-    mcp_path = tmp_path / "mcp.json"
-    mcp_path.write_text(json.dumps({"mcpServers": {"existing": {"type": "stdio", "command": "foo"}}}), encoding="utf-8")
-    doctor_calls: list[bool] = []
-
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--install-droid", "--droid-mcp-path", str(mcp_path)])
-
-    assert exc_info.value.code == 0
-    data = json.loads(mcp_path.read_text(encoding="utf-8"))
-    assert data["mcpServers"]["existing"]["command"] == "foo"
-    assert data["mcpServers"]["frontend-design-loop-mcp"]["type"] == "stdio"
-    assert data["mcpServers"]["frontend-design-loop-mcp"]["command"] == "frontend-design-loop-mcp"
-    assert doctor_calls == [False]
-
-
-def test_setup_install_droid_refuses_unmanaged_existing_entry(tmp_path) -> None:
-    mcp_path = tmp_path / "mcp.json"
-    mcp_path.write_text(
-        json.dumps({"mcpServers": {"frontend-design-loop-mcp": {"type": "stdio", "command": "existing", "args": []}}}),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod._install_droid_config("frontend-design-loop-mcp", mcp_path)
-
-    assert "unmanaged" in str(exc_info.value)
-
-
-def test_setup_print_opencode_config_outputs_json(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    setup_mod.main(["--print-opencode-config"])
-
-    out = capsys.readouterr().out
-    assert '"mcp"' in out
-    assert '"type": "local"' in out
-    assert '"frontend-design-loop-mcp"' in out
-
-
-def test_setup_install_opencode_updates_config_and_runs_doctor(tmp_path, monkeypatch) -> None:
-    config_path = tmp_path / "opencode.json"
-    config_path.write_text(
-        '{\n  // keep comments\n  "default_agent": "build",\n}\n',
-        encoding="utf-8",
-    )
-    doctor_calls: list[bool] = []
-
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(["--install-opencode", "--opencode-config-path", str(config_path)])
-
-    assert exc_info.value.code == 0
-    data = json.loads(config_path.read_text(encoding="utf-8"))
-    assert data["default_agent"] == "build"
-    assert data["mcp"]["frontend-design-loop-mcp"]["type"] == "local"
-    assert data["mcp"]["frontend-design-loop-mcp"]["command"] == ["frontend-design-loop-mcp"]
-    assert data["mcp"]["frontend-design-loop-mcp"]["enabled"] is True
-    assert doctor_calls == [False]
-
-
-def test_setup_install_opencode_refuses_unmanaged_existing_entry(tmp_path) -> None:
-    config_path = tmp_path / "opencode.json"
-    config_path.write_text(
-        json.dumps({"mcp": {"frontend-design-loop-mcp": {"type": "local", "command": ["other"], "enabled": True}}}),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod._install_opencode_config("frontend-design-loop-mcp", config_path)
-
-    assert "unmanaged" in str(exc_info.value)
-
-
-def test_detect_install_targets_respects_skip_clients(monkeypatch, tmp_path) -> None:
-    codex_cfg = tmp_path / "config.toml"
-    gemini_cfg = tmp_path / "settings.json"
-    droid_cfg = tmp_path / "mcp.json"
-    opencode_cfg = tmp_path / "opencode.json"
-    codex_cfg.write_text("", encoding="utf-8")
-    gemini_cfg.write_text("{}", encoding="utf-8")
-    droid_cfg.write_text("{}", encoding="utf-8")
-    opencode_cfg.write_text("{}", encoding="utf-8")
-
-    monkeypatch.setattr(setup_mod, "_default_codex_config_path", lambda: codex_cfg)
-    monkeypatch.setattr(setup_mod, "_default_gemini_settings_path", lambda: gemini_cfg)
-    monkeypatch.setattr(setup_mod, "_default_droid_mcp_path", lambda: droid_cfg)
-    monkeypatch.setattr(setup_mod, "_default_opencode_config_path", lambda: opencode_cfg)
+    monkeypatch.setattr(setup_mod, "get_default_config_path", lambda: Path("/project/config.yaml"))
+    setup_mod.main(["--workflow", "automated", "--print-config"])
+    payload = json.loads(capsys.readouterr().out)["mcpServers"]["frontend-design-loop-mcp"]
+    assert payload["args"] == ["-m", "frontend_design_loop_mcp.mcp_server"]
+    assert payload["env"]["FRONTEND_DESIGN_LOOP_CONFIG_PATH"] == "/project/config.yaml"
+
+
+def test_codex_windows_paths_and_quoted_name_round_trip(tmp_path, monkeypatch):
+    payload = {
+        "command": "C:\\Program Files\\Python\\python.exe",
+        "args": ["-m", "design_toolkit.server"],
+        "env": {"SITE_PATH": 'C:\\Users\\Alex\\new\\a"b'},
+    }
+    monkeypatch.setattr(setup_mod, "_build_claude_payload", lambda: payload)
+    name = 'my.tools"quoted'
+    config = tmp_path / "config.toml"
+    config.write_text('model = "unchanged"\n[features]\nother = true\n')
+    setup_mod._install_codex_config(name, config)
+    setup_mod._install_codex_config(name, config)
+    parsed = setup_mod.tomllib.loads(config.read_text())
+    assert parsed["mcp_servers"][name]["command"] == payload["command"]
+    assert parsed["mcp_servers"][name]["env"] == payload["env"]
+    assert parsed["model"] == "unchanged" and parsed["features"]["other"] is True
+    assert config.read_text().count("# BEGIN") == 1
+
+
+@pytest.mark.parametrize(
+    "existing",
+    ['[mcp_servers."same"]\ncommand="user"\n', 'mcp_servers = {same = {command="user"}}\n'],
+)
+def test_codex_unmanaged_collision_preserves_bytes(tmp_path, existing):
+    config = tmp_path / "config.toml"
+    config.write_text(existing)
+    with pytest.raises(SystemExit, match="unmanaged"):
+        setup_mod._install_codex_config("same", config)
+    assert config.read_text() == existing
+
+
+def test_invalid_toml_never_replaced(tmp_path):
+    config = tmp_path / "config.toml"
+    original = 'model = "unterminated\n'
+    config.write_text(original)
+    with pytest.raises(ValueError):
+        setup_mod._install_codex_config("new", config)
+    assert config.read_text() == original
+
+
+def test_failed_atomic_replace_preserves_original(tmp_path, monkeypatch):
+    config = tmp_path / "config.toml"
+    config.write_text('model="old"\n')
     monkeypatch.setattr(
-        setup_mod.shutil,
-        "which",
-        lambda name: "/usr/bin/claude" if name == "claude" else None,
+        setup_mod.os, "replace", lambda *args: (_ for _ in ()).throw(OSError("busy"))
+    )
+    with pytest.raises(OSError, match="busy"):
+        setup_mod._install_codex_config("new", config)
+    assert config.read_text() == 'model="old"\n'
+    assert list(tmp_path.iterdir()) == [config]
+
+
+@pytest.mark.parametrize(
+    "client,field", [("gemini", "mcpServers"), ("droid", "mcpServers"), ("opencode", "mcp")]
+)
+def test_json_install_preserves_unrelated_and_refuses_collision(tmp_path, client, field):
+    path = tmp_path / "settings.json"
+    data = {"unrelated": {"model": "user-selected"}, field: {"other": {"command": "custom"}}}
+    path.write_text(json.dumps(data))
+    install = getattr(setup_mod, f"_install_{client}_config")
+    install("ours", path)
+    parsed = json.loads(path.read_text())
+    assert parsed["unrelated"] == data["unrelated"]
+    assert parsed[field]["other"] == data[field]["other"]
+    before = path.read_bytes()
+    with pytest.raises(SystemExit, match="unmanaged"):
+        install("other", path)
+    assert path.read_bytes() == before
+
+
+def test_opencode_jsonc_preserves_semantic_settings(tmp_path):
+    path = tmp_path / "opencode.jsonc"
+    path.write_text('{// comment\n"model":"keep", "url":"https://example.com",}\n')
+    setup_mod._install_opencode_config("new", path)
+    parsed = json.loads(path.read_text())
+    assert parsed["model"] == "keep" and parsed["url"] == "https://example.com"
+    assert parsed["mcp"]["new"]["command"] == setup_mod._payload_command_argv()
+
+
+def test_print_multiple_configs_never_installs(monkeypatch, capsys):
+    monkeypatch.setattr(
+        setup_mod, "_ensure_playwright_ready", lambda: pytest.fail("must be read only")
+    )
+    setup_mod.main(["--print-codex-config", "--print-opencode-config"])
+    text = capsys.readouterr().out
+    assert "tool_timeout_sec = 900" in text and '"type": "local"' in text
+
+
+def test_explicit_install_uses_selected_workflow(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
+    monkeypatch.setattr(setup_mod, "_run_doctor", lambda **kwargs: 0)
+    path = tmp_path / "config.toml"
+    with pytest.raises(SystemExit) as error:
+        setup_mod.main(["--install-codex", "--codex-config-path", str(path)])
+    assert error.value.code == 0
+    assert (
+        setup_mod.tomllib.loads(path.read_text())["mcp_servers"]["frontend-design-toolkit"]["args"][
+            -1
+        ]
+        == "design_toolkit.server"
     )
 
-    assert setup_mod._detect_install_targets() == ["claude", "codex", "gemini", "droid", "opencode"]
-    assert setup_mod._detect_install_targets(skip_clients={"claude", "gemini", "opencode"}) == ["codex", "droid"]
+
+def test_doctor_no_cli_is_optional_and_no_auth_or_inference(monkeypatch, capsys):
+    monkeypatch.setattr(setup_mod, "_check_playwright_ready", lambda: (True, "ready"))
+    monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: None)
+    monkeypatch.setattr(
+        setup_mod.subprocess, "run", lambda *args, **kwargs: pytest.fail("must not probe")
+    )
+    assert setup_mod._run_doctor(run_smoke=False) == 0
+    assert '"live_inference": "not_run"' in capsys.readouterr().out
 
 
-def test_setup_install_all_detected_clients_installs_everything(monkeypatch, tmp_path, capsys) -> None:
-    codex_cfg = tmp_path / "config.toml"
-    gemini_cfg = tmp_path / "settings.json"
-    droid_cfg = tmp_path / "mcp.json"
-    opencode_cfg = tmp_path / "opencode.json"
-    gemini_cfg.write_text("{}", encoding="utf-8")
-    doctor_calls: list[bool] = []
-    installed: list[str] = []
+@pytest.mark.parametrize(
+    "cli,response,status",
+    [
+        (
+            "claude",
+            SimpleNamespace(
+                returncode=0,
+                stdout='{"loggedIn":true,"authMethod":"claude.ai","email":"private"}',
+                stderr="",
+            ),
+            "authenticated",
+        ),
+        (
+            "codex",
+            SimpleNamespace(returncode=0, stdout="", stderr="Logged in using ChatGPT"),
+            "authenticated",
+        ),
+        (
+            "codex",
+            SimpleNamespace(returncode=1, stdout="", stderr="Not logged in"),
+            "unauthenticated",
+        ),
+        (
+            "opencode",
+            SimpleNamespace(returncode=0, stdout="provider token private", stderr=""),
+            "unknown",
+        ),
+    ],
+)
+def test_auth_probes_classify_without_echoing_accounts(monkeypatch, cli, response, status):
+    monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: "/bin/" + name)
+    calls = []
+    monkeypatch.setattr(
+        setup_mod.subprocess, "run", lambda command, **kw: calls.append((command, kw)) or response
+    )
+    result = setup_mod._native_auth_status(cli, probe=True)
+    assert result["authentication"] == status
+    assert result["live_inference"] == "not_run"
+    assert "private" not in json.dumps(result)
+    assert calls[0][1]["timeout"] == 10
 
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-    monkeypatch.setattr(setup_mod, "_detect_install_targets", lambda *, skip_clients=None: ["claude", "codex", "gemini", "droid", "opencode"])
-    monkeypatch.setattr(setup_mod, "_install_claude_config", lambda **kwargs: installed.append("claude"))
-    monkeypatch.setattr(setup_mod, "_install_codex_config", lambda **kwargs: installed.append("codex"))
-    monkeypatch.setattr(setup_mod, "_install_gemini_config", lambda **kwargs: installed.append("gemini"))
-    monkeypatch.setattr(setup_mod, "_install_droid_config", lambda **kwargs: installed.append("droid"))
-    monkeypatch.setattr(setup_mod, "_install_opencode_config", lambda **kwargs: installed.append("opencode"))
 
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(
-            [
-                "--install-all-detected-clients",
-                "--codex-config-path",
-                str(codex_cfg),
-                "--gemini-settings-path",
-                str(gemini_cfg),
-                "--droid-mcp-path",
-                str(droid_cfg),
-                "--opencode-config-path",
-                str(opencode_cfg),
-            ]
-        )
-
-    assert exc_info.value.code == 0
-    assert installed == ["claude", "codex", "gemini", "droid", "opencode"]
-    assert doctor_calls == [False]
-    out = capsys.readouterr().out
-    assert "Installed detected clients: claude, codex, gemini, droid, opencode" in out
+def test_auth_probe_unrecognized_output_stays_unknown(monkeypatch):
+    monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: "found")
+    monkeypatch.setattr(
+        setup_mod.subprocess,
+        "run",
+        lambda *args, **kw: SimpleNamespace(returncode=0, stdout="changed format", stderr=""),
+    )
+    assert setup_mod._native_auth_status("claude", probe=True)["authentication"] == "unknown"
 
 
-def test_setup_install_all_detected_clients_honors_skip(monkeypatch, tmp_path, capsys) -> None:
-    codex_cfg = tmp_path / "config.toml"
-    gemini_cfg = tmp_path / "settings.json"
-    droid_cfg = tmp_path / "mcp.json"
-    opencode_cfg = tmp_path / "opencode.json"
-    doctor_calls: list[bool] = []
+def test_check_missing_chromium_fails(monkeypatch):
+    monkeypatch.setattr(setup_mod, "_check_playwright_ready", lambda: (False, "missing"))
+    with pytest.raises(SystemExit) as error:
+        setup_mod.main(["--check"])
+    assert error.value.code == 1
 
-    monkeypatch.setattr(setup_mod, "_ensure_playwright_ready", lambda: None)
-    monkeypatch.setattr(setup_mod, "_run_doctor", lambda *, run_smoke: doctor_calls.append(run_smoke) or 0)
-    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: False)
-    monkeypatch.setattr(setup_mod, "_detect_install_targets", lambda *, skip_clients=None: [])
 
-    with pytest.raises(SystemExit) as exc_info:
-        setup_mod.main(
-            [
-                "--install-all-detected-clients",
-                "--skip-client",
-                "claude",
-                "--skip-client",
-                "codex",
-                "--skip-client",
-                "gemini",
-                "--skip-client",
-                "droid",
-                "--skip-client",
-                "opencode",
-                "--codex-config-path",
-                str(codex_cfg),
-                "--gemini-settings-path",
-                str(gemini_cfg),
-                "--droid-mcp-path",
-                str(droid_cfg),
-                "--opencode-config-path",
-                str(opencode_cfg),
-            ]
-        )
+def test_managed_json_entry_preserves_user_environment_and_options(tmp_path, monkeypatch):
+    monkeypatch.setattr(setup_mod, "_WORKFLOW", "automated")
+    monkeypatch.setattr(setup_mod, "is_repo_checkout", lambda: True)
+    path = tmp_path / "settings.json"
+    payload = setup_mod._build_claude_payload()
+    payload["env"]["CUSTOM_OPTION"] = "keep"
+    payload["timeout"] = 123
+    path.write_text(json.dumps({"mcpServers": {"ours": payload}}))
+    setup_mod._install_gemini_config("ours", path)
+    entry = json.loads(path.read_text())["mcpServers"]["ours"]
+    assert entry["env"]["CUSTOM_OPTION"] == "keep" and entry["timeout"] == 123
 
-    assert exc_info.value.code == 0
-    assert doctor_calls == [False]
-    out = capsys.readouterr().out
-    assert "No supported clients detected for auto-install." in out
+
+def test_claude_install_passes_json_through_prepared_argv(monkeypatch):
+    monkeypatch.setattr(setup_mod.shutil, "which", lambda *args, **kwargs: "claude.cmd")
+    prepared = []
+    launches = []
+
+    def prepare(argv):
+        prepared.append(argv)
+        return ["node.exe", "claude-cli.js", *argv[1:]]
+
+    monkeypatch.setattr(setup_mod, "prepare_process_argv", prepare)
+    monkeypatch.setattr(setup_mod.subprocess, "run", lambda argv, **kwargs: launches.append((argv, kwargs)))
+    setup_mod._install_claude_config(scope="user", server_name="tool with spaces")
+    assert prepared[0][0] == "claude"
+    assert launches[0][0] == ["node.exe", "claude-cli.js", *prepared[0][1:]]
+    assert json.loads(launches[0][0][-1]) == setup_mod._build_claude_payload()
+    assert launches[0][1]["check"] is True
+
+
+def test_auth_probe_uses_prepared_argv_and_detached_stdin(monkeypatch):
+    monkeypatch.setattr(setup_mod.shutil, "which", lambda *args, **kwargs: "found")
+    calls = []
+    monkeypatch.setattr(setup_mod, "prepare_process_argv", lambda argv: ["node.exe", "claude-cli.js", *argv[1:]])
+    monkeypatch.setattr(setup_mod.subprocess, "run", lambda argv, **kwargs: calls.append((argv, kwargs)) or SimpleNamespace(returncode=0, stdout='{"loggedIn":true}', stderr=""))
+    result = setup_mod._native_auth_status("claude", probe=True)
+    assert result["authentication"] == "authenticated"
+    assert calls[0][0] == ["node.exe", "claude-cli.js", "auth", "status"]
+    assert calls[0][1]["stdin"] == setup_mod.subprocess.DEVNULL

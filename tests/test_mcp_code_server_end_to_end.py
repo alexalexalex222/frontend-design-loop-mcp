@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import anyio
@@ -26,7 +27,16 @@ def test_frontend_design_loop_solve_end_to_end_offline(tmp_path: Path, monkeypat
     _git(repo, "init")
     _git(repo, "add", "hello.txt")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -104,6 +114,11 @@ def test_frontend_design_loop_solve_end_to_end_offline(tmp_path: Path, monkeypat
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello world",
             planning_mode="off",
@@ -114,14 +129,15 @@ def test_frontend_design_loop_solve_end_to_end_offline(tmp_path: Path, monkeypat
             vision_mode="auto",
             section_creativity_mode="off",
             apply_to_repo=False,
-            allow_nonpassing_winner=False,
+            allow_nonpassing_winner=True,
         )
 
     result = anyio.run(run)
+    assert result["winner_passes_all"] is False
 
     assert result["test_command_inferred"] is True
-    assert result["test_command"] == "true"
-    assert "skipping" in str(result["test_command_inferred_reason"] or "").lower()
+    assert result["test_command"] is None
+    assert "skipped" in str(result["test_command_inferred_reason"] or "").lower()
 
     winner = result["winner"]
     assert winner is not None
@@ -136,7 +152,9 @@ def test_frontend_design_loop_solve_end_to_end_offline(tmp_path: Path, monkeypat
     assert (run_dir / "run_summary.json").exists()
 
 
-def test_frontend_design_loop_solve_falls_back_when_git_diff_breaks(tmp_path: Path, monkeypatch) -> None:
+def test_frontend_design_loop_solve_falls_back_when_git_diff_breaks(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "hello.txt").write_text("hello\n", encoding="utf-8")
@@ -144,7 +162,16 @@ def test_frontend_design_loop_solve_falls_back_when_git_diff_breaks(tmp_path: Pa
     _git(repo, "init")
     _git(repo, "add", "hello.txt")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -198,7 +225,9 @@ def test_frontend_design_loop_solve_falls_back_when_git_diff_breaks(tmp_path: Pa
         p.write_bytes(diff_text.encode("utf-8"))
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
@@ -219,6 +248,11 @@ def test_frontend_design_loop_solve_falls_back_when_git_diff_breaks(tmp_path: Pa
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello world",
             planning_mode="off",
@@ -229,17 +263,20 @@ def test_frontend_design_loop_solve_falls_back_when_git_diff_breaks(tmp_path: Pa
             vision_mode="auto",
             section_creativity_mode="off",
             apply_to_repo=False,
-            allow_nonpassing_winner=False,
+            allow_nonpassing_winner=True,
         )
 
     result = anyio.run(run)
+    assert result["winner_passes_all"] is False
     winner = result["winner"]
     assert winner is not None
     assert winner["error"] is None
     assert "hello world" in winner["patch"]
 
 
-def test_section_creativity_runs_on_structurally_sound_nonpassing_ui(tmp_path: Path, monkeypatch) -> None:
+def test_section_creativity_runs_on_structurally_sound_nonpassing_ui(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text("<!doctype html><p>hello</p>\n", encoding="utf-8")
@@ -247,7 +284,16 @@ def test_section_creativity_runs_on_structurally_sound_nonpassing_ui(tmp_path: P
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -287,20 +333,29 @@ def test_section_creativity_runs_on_structurally_sound_nonpassing_ui(tmp_path: P
             "patches": [
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class=\"hero\"><p>hello world</p></main>\n",
+                    "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class="hero"><p>hello world</p></main>\n',
                 }
             ],
             "notes": ["offline stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
@@ -309,7 +364,7 @@ def test_section_creativity_runs_on_structurally_sound_nonpassing_ui(tmp_path: P
 
     seen: dict[str, bool] = {"called": False}
 
-    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None):
+    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None, goal=""):
         _ = (image, provider_name, model, timeout_s)
         seen["called"] = True
         return {
@@ -325,6 +380,11 @@ def test_section_creativity_runs_on_structurally_sound_nonpassing_ui(tmp_path: P
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Turn this into a premium landing page",
             planning_mode="off",
@@ -332,7 +392,7 @@ def test_section_creativity_runs_on_structurally_sound_nonpassing_ui(tmp_path: P
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/index.html",
@@ -360,7 +420,9 @@ def test_section_creativity_eval_applies_timeout_override(monkeypatch) -> None:
             seen["timeout_s"] = kwargs.get("timeout_s")
             return FakeResponse('{"sections":[]}')
 
-    monkeypatch.setattr(mcp_code_server.ProviderFactory, "get", lambda provider_name, config: FakeProvider())
+    monkeypatch.setattr(
+        mcp_code_server.ProviderFactory, "get", lambda provider_name, config: FakeProvider()
+    )
 
     async def run():
         return await mcp_code_server._section_creativity_eval(
@@ -375,7 +437,9 @@ def test_section_creativity_eval_applies_timeout_override(monkeypatch) -> None:
     assert seen["timeout_s"] == 180.0
 
 
-def test_creativity_refiner_scopes_to_top_weak_sections_for_kilo(tmp_path: Path, monkeypatch) -> None:
+def test_creativity_refiner_scopes_to_top_weak_sections_for_kilo(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text("<!doctype html><p>hello</p>\n", encoding="utf-8")
@@ -383,7 +447,16 @@ def test_creativity_refiner_scopes_to_top_weak_sections_for_kilo(tmp_path: Path,
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -426,34 +499,53 @@ def test_creativity_refiner_scopes_to_top_weak_sections_for_kilo(tmp_path: Path,
             "patches": [
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class=\"hero\"><p>hello world</p></main>\n",
+                    "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class="hero"><p>hello world</p></main>\n',
                 }
             ],
             "notes": ["offline stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
             "score": {"score": 7.4},
         }
 
-    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None):
+    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None, goal=""):
         _ = (image, provider_name, model, timeout_s)
         return {
             "sections": [
                 {"label": "footer", "score": 0.61, "confidence": 0.82, "notes": "generic footer"},
-                {"label": "hero", "score": 0.12, "confidence": 0.91, "notes": "hero lacks signature moment"},
+                {
+                    "label": "hero",
+                    "score": 0.12,
+                    "confidence": 0.91,
+                    "notes": "hero lacks signature moment",
+                },
                 {"label": "header", "score": 0.18, "confidence": 0.88, "notes": "plain nav"},
-                {"label": "proof_wall", "score": 0.32, "confidence": 0.86, "notes": "proof is too generic"},
+                {
+                    "label": "proof_wall",
+                    "score": 0.32,
+                    "confidence": 0.86,
+                    "notes": "proof is too generic",
+                },
                 {"label": "final_cta", "score": 0.67, "confidence": 0.9, "notes": "quiet CTA"},
             ]
         }
@@ -465,6 +557,10 @@ def test_creativity_refiner_scopes_to_top_weak_sections_for_kilo(tmp_path: Path,
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Turn this into a premium landing page",
             solver_mode="host_cli",
@@ -475,7 +571,7 @@ def test_creativity_refiner_scopes_to_top_weak_sections_for_kilo(tmp_path: Path,
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/index.html",
@@ -491,11 +587,11 @@ def test_creativity_refiner_scopes_to_top_weak_sections_for_kilo(tmp_path: Path,
     result = anyio.run(run)
     assert result["winner"] is not None
     prompt = str(seen["prompt"] or "")
-    assert "WEAK_SECTIONS (edit ONLY these highest-priority targets)" in prompt
+    assert "TARGET FINDINGS (verify and prioritize)" in prompt
     assert "hero, header, proof_wall" in prompt
     assert "footer" not in prompt
     assert "final_cta" not in prompt
-    assert seen["max_tokens"] == 3200
+    assert seen["max_tokens"] == 8000
 
 
 def test_patch_apply_failure_can_reanchor_once_and_recover(tmp_path: Path, monkeypatch) -> None:
@@ -506,7 +602,16 @@ def test_patch_apply_failure_can_reanchor_once_and_recover(tmp_path: Path, monke
     _git(repo, "init")
     _git(repo, "add", "hello.txt")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -571,7 +676,9 @@ def test_patch_apply_failure_can_reanchor_once_and_recover(tmp_path: Path, monke
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
@@ -584,6 +691,11 @@ def test_patch_apply_failure_can_reanchor_once_and_recover(tmp_path: Path, monke
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello world",
             planning_mode="off",
@@ -593,17 +705,20 @@ def test_patch_apply_failure_can_reanchor_once_and_recover(tmp_path: Path, monke
             max_fix_rounds=0,
             vision_mode="auto",
             section_creativity_mode="off",
-            allow_nonpassing_winner=False,
+            allow_nonpassing_winner=True,
             apply_to_repo=False,
         )
 
     result = anyio.run(run)
+    assert result["winner_passes_all"] is False
     assert result["winner"] is not None
     assert seen["repair_calls"] == 1
     assert "hello world" in result["winner"]["patch"]
 
 
-def test_creativity_refiner_runs_even_when_no_sections_are_strong(tmp_path: Path, monkeypatch) -> None:
+def test_creativity_refiner_runs_even_when_no_sections_are_strong(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text("<!doctype html><p>hello</p>\n", encoding="utf-8")
@@ -611,7 +726,16 @@ def test_creativity_refiner_runs_even_when_no_sections_are_strong(tmp_path: Path
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -654,7 +778,7 @@ def test_creativity_refiner_runs_even_when_no_sections_are_strong(tmp_path: Path
                 "patches": [
                     {
                         "path": "index.html",
-                        "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><main class=\"hero\"><p>hello world</p></main>\n+<!doctype html><main class=\"hero signature\"><p>hello world</p></main>\n",
+                        "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><main class="hero"><p>hello world</p></main>\n+<!doctype html><main class="hero signature"><p>hello world</p></main>\n',
                     }
                 ],
                 "notes": ["coarse creativity rescue"],
@@ -663,27 +787,36 @@ def test_creativity_refiner_runs_even_when_no_sections_are_strong(tmp_path: Path
             "patches": [
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class=\"hero\"><p>hello world</p></main>\n",
+                    "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class="hero"><p>hello world</p></main>\n',
                 }
             ],
             "notes": ["offline stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
             "score": {"score": 7.5},
         }
 
-    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None):
+    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None, goal=""):
         _ = (image, provider_name, model, timeout_s)
         return {
             "sections": [
@@ -698,6 +831,11 @@ def test_creativity_refiner_runs_even_when_no_sections_are_strong(tmp_path: Path
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Turn this into a premium landing page",
             planning_mode="off",
@@ -705,7 +843,7 @@ def test_creativity_refiner_runs_even_when_no_sections_are_strong(tmp_path: Path
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/index.html",
@@ -721,7 +859,9 @@ def test_creativity_refiner_runs_even_when_no_sections_are_strong(tmp_path: Path
     assert seen["creativity_fix_called"] is True
 
 
-def test_optional_vision_refine_failure_does_not_discard_candidate(tmp_path: Path, monkeypatch) -> None:
+def test_optional_vision_refine_failure_does_not_discard_candidate(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text("<!doctype html><p>hello</p>\n", encoding="utf-8")
@@ -729,7 +869,16 @@ def test_optional_vision_refine_failure_does_not_discard_candidate(tmp_path: Pat
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -770,20 +919,29 @@ def test_optional_vision_refine_failure_does_not_discard_candidate(tmp_path: Pat
             "patches": [
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class=\"hero\"><p>hello world</p></main>\n",
+                    "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class="hero"><p>hello world</p></main>\n',
                 }
             ],
             "notes": ["offline stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
@@ -796,6 +954,11 @@ def test_optional_vision_refine_failure_does_not_discard_candidate(tmp_path: Pat
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Turn this into a premium landing page",
             planning_mode="off",
@@ -803,7 +966,7 @@ def test_optional_vision_refine_failure_does_not_discard_candidate(tmp_path: Pat
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/index.html",
@@ -820,7 +983,9 @@ def test_optional_vision_refine_failure_does_not_discard_candidate(tmp_path: Pat
     assert result["winner"]["vision_score"] == 7.5
 
 
-def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, monkeypatch) -> None:
+def test_optional_vision_failure_preserves_candidate_without_switching_provider(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text("<!doctype html><p>hello</p>\n", encoding="utf-8")
@@ -828,7 +993,16 @@ def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, mo
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -842,8 +1016,14 @@ def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, mo
     seen: dict[str, list[str] | float | None] = {"vision_fix_providers": [], "kilo_timeout_s": None}
     vision_states = iter(
         [
-            {"broken": {"broken": True, "confidence": 1.0, "reasons": ["layout collapse"]}, "score": {"score": 7.5}},
-            {"broken": {"broken": False, "confidence": 1.0, "reasons": []}, "score": {"score": 8.2}},
+            {
+                "broken": {"broken": True, "confidence": 1.0, "reasons": ["layout collapse"]},
+                "score": {"score": 7.5},
+            },
+            {
+                "broken": {"broken": False, "confidence": 1.0, "reasons": []},
+                "score": {"score": 8.2},
+            },
         ]
     )
 
@@ -880,7 +1060,7 @@ def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, mo
                 "patches": [
                     {
                         "path": "index.html",
-                        "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><main class=\"hero\"><p>hello world</p></main>\n+<!doctype html><main class=\"hero signature\"><p>hello world</p></main>\n",
+                        "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><main class="hero"><p>hello world</p></main>\n+<!doctype html><main class="hero signature"><p>hello world</p></main>\n',
                     }
                 ],
                 "notes": ["vision fallback patch"],
@@ -889,20 +1069,29 @@ def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, mo
             "patches": [
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class=\"hero\"><p>hello world</p></main>\n",
+                    "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class="hero"><p>hello world</p></main>\n',
                 }
             ],
             "notes": ["offline stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return next(vision_states)
 
@@ -912,6 +1101,10 @@ def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, mo
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Turn this into a premium landing page",
             planning_mode="off",
@@ -922,7 +1115,7 @@ def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, mo
             provider="kilo_cli",
             model="kilo/minimax/minimax-m2.5:free",
             solver_mode="host_cli",
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/index.html",
@@ -937,19 +1130,17 @@ def test_optional_vision_refine_falls_back_to_vision_provider(tmp_path: Path, mo
 
     result = anyio.run(run)
     assert result["winner"] is not None
-    assert result["winner"]["vision_score"] == 8.2
-    assert seen["vision_fix_providers"] == ["codex_cli"]
-    assert seen["kilo_timeout_s"] is None
-
+    assert result["winner"]["vision_score"] == 7.5
+    assert seen["vision_fix_providers"] == ["kilo_cli"]
+    assert seen["kilo_timeout_s"] == 120.0
     run_dir = Path(result["run_dir"])
-    response_path = run_dir / "candidates" / "0" / "llm_vision_fix_response_1.json"
-    response = json.loads(response_path.read_text(encoding="utf-8"))
-    assert response["_frontend_design_loop_eval_meta"]["provider_used"] == "codex_cli"
-    assert response["_frontend_design_loop_eval_meta"]["fallback_used"] is True
-    assert (run_dir / "candidates" / "0" / "vision_fix_primary_error_1.txt").exists()
+    assert (run_dir / "candidates" / "0" / "vision_fix_error_1.txt").exists()
+    assert not (run_dir / "candidates" / "0" / "llm_vision_fix_response_1.json").exists()
 
 
-def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path, monkeypatch) -> None:
+def test_optional_creativity_uses_selected_provider_without_switching(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text("<!doctype html><p>hello</p>\n", encoding="utf-8")
@@ -957,7 +1148,16 @@ def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -968,7 +1168,10 @@ def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path
     out_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("FRONTEND_DESIGN_LOOP_MCP_OUT_DIR", str(out_dir))
 
-    seen: dict[str, list[str] | float | None] = {"creativity_fix_providers": [], "kilo_timeout_s": None}
+    seen: dict[str, list[str] | float | None] = {
+        "creativity_fix_providers": [],
+        "kilo_timeout_s": None,
+    }
 
     async def fake_call_llm_json(
         *,
@@ -1003,7 +1206,7 @@ def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path
                 "patches": [
                     {
                         "path": "index.html",
-                        "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><main class=\"hero\"><p>hello world</p></main>\n+<!doctype html><main class=\"hero signature\"><p>hello world</p></main>\n",
+                        "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><main class="hero"><p>hello world</p></main>\n+<!doctype html><main class="hero signature"><p>hello world</p></main>\n',
                     }
                 ],
                 "notes": ["creativity fallback patch"],
@@ -1012,27 +1215,36 @@ def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path
             "patches": [
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class=\"hero\"><p>hello world</p></main>\n",
+                    "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class="hero"><p>hello world</p></main>\n',
                 }
             ],
             "notes": ["offline stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
             "score": {"score": 7.5},
         }
 
-    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None):
+    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None, goal=""):
         _ = (image, provider_name, model, timeout_s)
         return {
             "sections": [
@@ -1047,6 +1259,10 @@ def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Turn this into a premium landing page",
             planning_mode="off",
@@ -1057,7 +1273,7 @@ def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path
             provider="kilo_cli",
             model="kilo/minimax/minimax-m2.5:free",
             solver_mode="host_cli",
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/index.html",
@@ -1073,18 +1289,16 @@ def test_optional_creativity_refine_falls_back_to_vision_provider(tmp_path: Path
 
     result = anyio.run(run)
     assert result["winner"] is not None
-    assert seen["creativity_fix_providers"] == ["codex_cli"]
-    assert seen["kilo_timeout_s"] is None
-
+    assert seen["creativity_fix_providers"] == ["kilo_cli"]
+    assert seen["kilo_timeout_s"] == 120.0
     run_dir = Path(result["run_dir"])
-    response_path = run_dir / "candidates" / "0" / "llm_creativity_fix_response_1.json"
-    response = json.loads(response_path.read_text(encoding="utf-8"))
-    assert response["_frontend_design_loop_eval_meta"]["provider_used"] == "codex_cli"
-    assert response["_frontend_design_loop_eval_meta"]["fallback_used"] is True
-    assert (run_dir / "candidates" / "0" / "creativity_fix_primary_error_1.txt").exists()
+    assert (run_dir / "candidates" / "0" / "creativity_fix_error_1.txt").exists()
+    assert not (run_dir / "candidates" / "0" / "llm_creativity_fix_response_1.json").exists()
 
 
-def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_path: Path, monkeypatch) -> None:
+def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text("<!doctype html><p>hello</p>\n", encoding="utf-8")
@@ -1092,7 +1306,16 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -1134,7 +1357,7 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
                 "patches": [
                     {
                         "path": "index.html",
-                        "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><main class=\"hero\"><p>hello world</p></main>\n+<!doctype html><main class=\"hero rescue\"><p>hello world</p></main>\n",
+                        "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><main class="hero"><p>hello world</p></main>\n+<!doctype html><main class="hero rescue"><p>hello world</p></main>\n',
                     }
                 ],
                 "notes": ["vision fix should not run"],
@@ -1145,7 +1368,7 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
                 "patches": [
                     {
                         "path": "index.html",
-                        "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><main class=\"hero\"><p>hello world</p></main>\n+<!doctype html><main class=\"hero signature\"><p>hello world</p></main>\n",
+                        "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><main class="hero"><p>hello world</p></main>\n+<!doctype html><main class="hero signature"><p>hello world</p></main>\n',
                     }
                 ],
                 "notes": ["targeted creativity patch"],
@@ -1154,13 +1377,20 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
             "patches": [
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class=\"hero\"><p>hello world</p></main>\n",
+                    "patch": '@@ -1,1 +1,1 @@\n-<!doctype html><p>hello</p>\n+<!doctype html><main class="hero"><p>hello world</p></main>\n',
                 }
             ],
             "notes": ["offline stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
@@ -1169,14 +1399,16 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
 
     vision_scores = iter([7.4, 8.2])
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
             "score": {"score": next(vision_scores)},
         }
 
-    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None):
+    async def fake_section_creativity_eval(*, image, provider_name, model, timeout_s=None, goal=""):
         _ = (image, provider_name, model, timeout_s)
         return {
             "sections": [
@@ -1191,6 +1423,10 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Turn this into a premium landing page",
             planning_mode="off",
@@ -1201,7 +1437,7 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
             provider="kilo_cli",
             model="kilo/minimax/minimax-m2.5:free",
             solver_mode="host_cli",
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/index.html",
@@ -1219,10 +1455,9 @@ def test_kilo_near_threshold_skips_vision_fix_and_uses_targeted_creativity(tmp_p
     assert result["winner"] is not None
     assert result["winner"]["vision_score"] == 8.2
     assert seen["vision_fix_providers"] == []
-    assert seen["creativity_fix_providers"] == ["codex_cli"]
+    assert seen["creativity_fix_providers"] == ["kilo_cli"]
 
     run_dir = Path(result["run_dir"])
     response_path = run_dir / "candidates" / "0" / "llm_creativity_fix_response_1.json"
     response = json.loads(response_path.read_text(encoding="utf-8"))
-    assert response["_frontend_design_loop_eval_meta"]["provider_used"] == "codex_cli"
-    assert response["_frontend_design_loop_eval_meta"]["fallback_used"] is True
+    assert "_frontend_design_loop_eval_meta" not in response

@@ -1,12 +1,15 @@
 """Utility functions for TITAN Factory."""
 
 import asyncio
+import copy
 import hashlib
 import json
+import math
 import os
 import re
 import signal
 import socket
+import subprocess
 import sys
 import threading
 from collections.abc import AsyncGenerator
@@ -16,6 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from rich.console import Console
+
+from frontend_design_loop_core.command_runtime import prepare_process_argv
 
 console = Console()
 
@@ -561,6 +566,234 @@ def find_available_port(start: int = 3000, max_attempts: int = 100) -> int:
     raise RuntimeError(f"No available port found in range {start}-{start + max_attempts}")
 
 
+async def _windows_host_status(fd: int) -> dict:
+    from frontend_design_loop_core.windows_process_host import _kernel32, pipe_available
+
+    api = _kernel32()
+    data = bytearray()
+    while len(data) < 4096:
+        available = pipe_available(fd, api)
+        if available:
+            data.extend(os.read(fd, min(available, 4096 - len(data))))
+            if b"\n" in data:
+                return json.loads(data)
+        await asyncio.sleep(0.01)
+    raise RuntimeError("Windows invocation host returned an invalid startup status")
+
+
+def _windows_inherited_stdio(kwargs: dict, crt: Any) -> None:
+    # A private handle list would otherwise exclude redirected standard handles
+    # when Popen takes its all-None fast path. Explicit CRT descriptors make it
+    # duplicate those handles into the restricted inheritance list.
+    fields = (("stdin", 0), ("stdout", 1), ("stderr", 2))
+    if all(kwargs.get(field) is None for field, _ in fields):
+        for field, descriptor in fields:
+            try:
+                valid = crt.get_osfhandle(descriptor) not in (-1, -2)
+            except OSError:
+                valid = False
+            kwargs[field] = descriptor if valid else asyncio.subprocess.DEVNULL
+
+
+def _windows_host_pipe(kwargs: dict) -> tuple[int, int, int]:
+    import msvcrt
+
+    if kwargs.get("executable") is not None:
+        raise ValueError("Windows invocation hosting does not support overriding executable")
+    if kwargs.get("close_fds") is False or kwargs.get("pass_fds"):
+        raise ValueError("Windows invocation hosting requires private handle inheritance")
+    _windows_inherited_stdio(kwargs, msvcrt)
+    startup = copy.copy(kwargs.get("startupinfo")) if kwargs.get("startupinfo") else subprocess.STARTUPINFO()
+    attributes = dict(startup.lpAttributeList or {})
+    read_fd, write_fd = os.pipe()
+    try:
+        handle = msvcrt.get_osfhandle(write_fd)
+        os.set_inheritable(write_fd, True)
+        attributes["handle_list"] = [*attributes.get("handle_list", []), handle]
+        startup.lpAttributeList = attributes
+        kwargs.update(startupinfo=startup, close_fds=True)
+        return read_fd, write_fd, handle
+    except BaseException:
+        os.close(read_fd)
+        os.close(write_fd)
+        raise
+
+
+async def _launch_process(
+    command: list[str] | str,
+    *,
+    shell: bool = False,
+    cwd: Path | str | None = None,
+    env: dict[str, str] | None = None,
+    **kwargs: Any,
+) -> asyncio.subprocess.Process:
+    kwargs.setdefault("start_new_session", os.name == "posix")
+    if os.name != "nt":
+        if shell:
+            return await asyncio.create_subprocess_shell(command, cwd=cwd, env=env, **kwargs)
+        return await asyncio.create_subprocess_exec(*command, cwd=cwd, env=env, **kwargs)
+
+    from frontend_design_loop_core import windows_process_host
+
+    read_fd, write_fd, handle = _windows_host_pipe(kwargs)
+    proc = None
+    try:
+        # Isolated startup skips sitecustomize and PYTHONPATH, which could spawn
+        # a process before the helper has established invocation ownership.
+        launch = asyncio.create_task(asyncio.create_subprocess_exec(
+            sys.executable, "-I", "-S", str(Path(windows_process_host.__file__).resolve()),
+            str(handle), "shell" if shell else "argv", json.dumps(command, ensure_ascii=True),
+            cwd=cwd, env=env, **kwargs,
+        ))
+        try:
+            cancelled = False
+            while True:
+                try:
+                    proc = await asyncio.shield(launch)
+                    break
+                except asyncio.CancelledError:
+                    # Recover the host even if repeated cancellation races
+                    # creation; never lose an invocation the caller launched.
+                    if launch.cancelled():
+                        raise
+                    cancelled = True
+            if cancelled:
+                raise asyncio.CancelledError
+        finally:
+            os.close(write_fd)
+            write_fd = -1
+        try:
+            status = await asyncio.wait_for(_windows_host_status(read_fd), timeout=10.0)
+        except (OSError, asyncio.TimeoutError) as exc:
+            raise RuntimeError("Windows invocation host failed before confirming Job ownership and target launch") from exc
+        if not status.get("ok"):
+            message = status.get("message", "Windows invocation host could not establish Job ownership")
+            error_type = status.get("error")
+            if error_type in {"FileNotFoundError", "PermissionError", "OSError"}:
+                exception = {"FileNotFoundError": FileNotFoundError,
+                             "PermissionError": PermissionError, "OSError": OSError}[error_type]
+                raise exception(status.get("errno"), message)
+            raise RuntimeError(message)
+        return proc
+    except BaseException:
+        if proc is not None:
+            await terminate_process_tree(proc, drain_output=True)
+        raise
+    finally:
+        os.close(read_fd)
+        if write_fd != -1:
+            os.close(write_fd)
+
+
+async def launch_process_argv(
+    args: list[str],
+    cwd: Path | str | None = None,
+    *,
+    env: dict[str, str] | None = None,
+    **kwargs: Any,
+) -> asyncio.subprocess.Process:
+    """Launch owned literal argv, preserving caller stdin/stdout/stderr kwargs.
+
+    Returns an asyncio Process (the invocation host on Windows). Pipes are raw
+    binary streams; callers own communication deadlines and must call
+    terminate_process_tree in a finally block. POSIX defaults to a new session;
+    explicit start_new_session is honored. Windows launch/Job errors raise
+    before returning; no target is launched without Job ownership.
+    """
+    if not args:
+        raise ValueError("No command provided")
+    prepared = prepare_process_argv(args, cwd=cwd, env=env, windows=os.name == "nt")
+    return await _launch_process(prepared, cwd=cwd, env=env, **kwargs)
+
+
+async def _terminate_process_tree(
+    proc: asyncio.subprocess.Process, *, drain_output: bool = False
+) -> None:
+    """Stop descendants as well as the parent, then bound pipe/process cleanup."""
+    if os.name == "nt":
+        # The host owns the only KILL_ON_JOB_CLOSE handle. Its exit kills Job
+        # members even when the original target has already exited.
+        if proc.returncode is None:
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                pass
+    elif os.name == "posix":
+        # Every command below owns a session, so its PID is also its group ID.
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+            await asyncio.sleep(0.2)
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    elif proc.returncode is None:
+        proc.kill()
+
+    # A descendant holding stdout open must not turn a command timeout into a hang.
+    waiter = proc.communicate() if drain_output else proc.wait()
+    await asyncio.wait_for(waiter, timeout=5.0)
+
+
+async def terminate_process_tree(
+    proc: asyncio.subprocess.Process, *, drain_output: bool = False
+) -> None:
+    """Stop a process launched by the shared runner, including descendants.
+
+    Public entry point for the toolkit and providers. Cancellation must finish
+    cleanup before an owning temporary workspace can be removed.
+    """
+    cleanup = asyncio.create_task(_terminate_process_tree(proc, drain_output=drain_output))
+    cancelled = False
+    while True:
+        try:
+            await asyncio.shield(cleanup)
+            break
+        except asyncio.CancelledError:
+            if cleanup.cancelled():
+                raise
+            cancelled = True
+    if cancelled:
+        raise asyncio.CancelledError
+
+
+async def run_process_argv(
+    args: list[str],
+    cwd: Path | str | None = None,
+    *,
+    timeout_s: float = 120.0,
+    env: dict[str, str] | None = None,
+    input_text: str | None = None,
+    capture_output: bool = True,
+) -> tuple[int, str, str]:
+    """Bounded argv execution with explicit stdin and process-tree ownership.
+
+    Unlike run_command_argv, launch failures and timeouts raise. Cancellation
+    propagates after cleanup. A supplied text prompt is UTF-8 stdin; otherwise
+    stdin is DEVNULL, so a child can never consume the MCP transport.
+    """
+    if not args:
+        raise ValueError("No command provided")
+    if not math.isfinite(timeout_s) or timeout_s <= 0:
+        raise ValueError("timeout_s must be finite and positive")
+    proc = await launch_process_argv(
+        args, cwd=cwd, env=env,
+        stdin=asyncio.subprocess.PIPE if input_text is not None else asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE if capture_output else None,
+        stderr=asyncio.subprocess.PIPE if capture_output else None,
+        start_new_session=(os.name == "posix"),
+    )
+    try:
+        communication = proc.communicate(input_text.encode("utf-8")) if input_text is not None else proc.communicate()
+        stdout, stderr = await asyncio.wait_for(communication, timeout=timeout_s)
+    except BaseException:
+        await terminate_process_tree(proc, drain_output=True)
+        raise
+    # A successful parent can leave descendants alive after closing its pipes.
+    # Invocation-owned helpers must finish before their workspace is removed.
+    await terminate_process_tree(proc)
+    return proc.returncode or 0, (stdout or b"").decode(errors="replace"), (stderr or b"").decode(errors="replace")
+
+
 async def run_command(
     cmd: str,
     cwd: Path | str | None = None,
@@ -581,24 +814,30 @@ async def run_command(
     timeout_s = timeout_ms / 1000
 
     try:
-        proc = await asyncio.create_subprocess_shell(
+        proc = await _launch_process(
             cmd,
+            shell=True,
             cwd=cwd,
+            stdin=asyncio.subprocess.DEVNULL,
+            start_new_session=(os.name == "posix"),
             stdout=asyncio.subprocess.PIPE if capture_output else None,
             stderr=asyncio.subprocess.PIPE if capture_output else None,
         )
 
         try:
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
+            await terminate_process_tree(proc)
             return (
                 proc.returncode or 0,
                 stdout.decode() if stdout else "",
                 stderr.decode() if stderr else "",
             )
         except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
+            await terminate_process_tree(proc, drain_output=True)
             return -1, "", f"Command timed out after {timeout_s}s"
+        except asyncio.CancelledError:
+            await terminate_process_tree(proc, drain_output=True)
+            raise
 
     except Exception as e:
         return -1, "", str(e)
@@ -615,29 +854,11 @@ async def run_command_argv(
     if not args:
         return -1, "", "No command provided"
 
-    timeout_s = timeout_ms / 1000
-
     try:
-        proc = await asyncio.create_subprocess_exec(
-            *args,
-            cwd=cwd,
-            env=env,
-            stdout=asyncio.subprocess.PIPE if capture_output else None,
-            stderr=asyncio.subprocess.PIPE if capture_output else None,
-        )
-
-        try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
-            return (
-                proc.returncode or 0,
-                stdout.decode() if stdout else "",
-                stderr.decode() if stderr else "",
-            )
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            return -1, "", f"Command timed out after {timeout_s}s"
-
+        return await run_process_argv(args, cwd, timeout_s=timeout_ms / 1000,
+                                      capture_output=capture_output, env=env)
+    except asyncio.TimeoutError:
+        return -1, "", f"Command timed out after {timeout_ms / 1000}s"
     except Exception as e:
         return -1, "", str(e)
 
@@ -661,32 +882,20 @@ async def managed_process(
         The running process
     """
     # Start process in its own process group so we can kill all children
-    proc = await asyncio.create_subprocess_shell(
+    proc = await _launch_process(
         cmd,
+        shell=True,
         cwd=cwd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        start_new_session=True,  # Creates new process group
+        stdin=asyncio.subprocess.DEVNULL,
+        start_new_session=(os.name == "posix"),
     )
 
     try:
         yield proc
     finally:
-        if proc.returncode is None:
-            try:
-                # Kill entire process group (process + all children)
-                pgid = os.getpgid(proc.pid)
-                os.killpg(pgid, signal.SIGTERM)
-                await asyncio.sleep(0.5)  # Give time for graceful shutdown
-                # Force kill if still running
-                try:
-                    os.killpg(pgid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass  # Already dead
-            except (ProcessLookupError, PermissionError):
-                # Process already dead or no permission
-                pass
-            await proc.wait()
+        await terminate_process_tree(proc)
 
 
 @asynccontextmanager
@@ -699,30 +908,20 @@ async def managed_process_argv(
     if not args:
         raise ValueError("No command provided")
 
-    proc = await asyncio.create_subprocess_exec(
-        *args,
+    proc = await launch_process_argv(
+        args,
         cwd=cwd,
         env=env,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        start_new_session=True,
+        stdin=asyncio.subprocess.DEVNULL,
+        start_new_session=(os.name == "posix"),
     )
 
     try:
         yield proc
     finally:
-        if proc.returncode is None:
-            try:
-                pgid = os.getpgid(proc.pid)
-                os.killpg(pgid, signal.SIGTERM)
-                await asyncio.sleep(0.5)
-                try:
-                    os.killpg(pgid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-            except (ProcessLookupError, PermissionError):
-                pass
-            await proc.wait()
+        await terminate_process_tree(proc)
 
 
 def truncate_text(text: str, max_length: int = 1000) -> str:

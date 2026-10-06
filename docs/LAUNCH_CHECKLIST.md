@@ -1,108 +1,28 @@
-# Launch Checklist
+# Release checklist
 
-## Goal
+This local upgrade is not published. Publication, registry updates, commits, and
+pushes require separate user authorization. This checklist grants none.
 
-Keep the public story narrow and believable:
-- coding agents can get pages functional
-- Frontend Design Loop makes them materially better
-- screenshot-grounded iteration plus proof artifacts is the differentiator
+Before a release:
 
-## Public Story Checklist
+- Align package/runtime/registry/changelog version metadata. The local upgrade is
+  consistently marked 1.1.0; this does not establish a published release.
+- Run focused setup/toolkit, provider/runtime, evidence, and automated-loop tests.
+- Build wheel/sdist and install the wheel into a fresh local environment.
+- Verify both installed console entrypoints and packaged playbook resources.
+- Verify native-only installation imports without Google or retry cloud extras;
+  selecting a cloud provider should explain the required `[cloud]` extra.
+- Run real desktop/mobile preview capture and interaction assertions; verify
+  returned MCP images, durable manifests, tree cleanup, and skipped/error semantics.
+- Run Windows/macOS/Linux checks; report unknown hosted-platform results explicitly.
+- Keep live CLI auth/inference opt-in and distinguish installation, authentication,
+  route verification, requested/observed model/effort, and actual inference.
+- Verify printed configs parse with Windows paths and preserve unrelated user settings
+  under explicit installation. Check an invalid config remains intact.
+- Review documentation against final integrated behavior. Published PyPI installation
+  instructions must identify which release actually includes the upgrade.
+- Check no claims of universal visual improvement or human preference are inferred
+  from screenshots, model scores, or successful mechanical checks.
 
-- README above the fold includes:
-  - one-line promise
-  - one public install command
-  - one setup command
-  - one real MCP call example
-  - the selected GA SMB hero/top crop gallery requested for public proof
-  - ACA whole-page before/after proof
-  - link to `docs/case-studies/index.md`
-  - short explanation of how the MCP works in practice
-- `docs/FRONTEND_DESIGN_LOOP_MCP.md` keeps the single-model default explicit
-- public docs do not imply multi-model-by-default behavior
-- public docs do not reintroduce legacy public branding or old repo identities
-
-## Proof Checklist
-
-- the selected GA SMB hero/top crop gallery images are present in `docs/images/`
-- ACA whole-page proof is present in `docs/images/`
-- case-study landing page exists at `docs/case-studies/index.md`
-- each public proof entry should include:
-  - rendered image evidence
-  - a short note on what it proves
-- no third-party site captures or legally questionable proof
-- no fake before states
-- no misleading proof framing
-
-## Distribution Checklist
-
-- canonical install snippet uses:
-
-```bash
-pipx install frontend-design-loop-mcp
-frontend-design-loop-setup --install-all-detected-clients
-```
-
-- GitHub fallback remains available:
-
-```bash
-pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
-frontend-design-loop-setup --install-all-detected-clients
-```
-
-- `docs/MCP_DIRECTORY_SUBMISSIONS.md` is the source of truth for directory copy
-- PyPI release is live. Current preferred maintenance path:
-  - workflow file: `.github/workflows/release.yml`
-  - GitHub environment: `pypi`
-  - PyPI project name: `frontend-design-loop-mcp`
-  - automated publish currently uses repo secret `PYPI_TOKEN`
-- submission targets:
-  - Glama
-  - PulseMCP
-  - MCP Market
-
-Current external status as of 2026-03-09:
-- GitHub raw repo docs are live, PyPI is live at `frontend-design-loop-mcp`, and the official MCP Registry entry is now active
-- Glama new-slug URL still resolves to the legacy `petamind-mcp` listing
-- Glama correction issue is filed at `punkpeye/awesome-mcp-servers#2986`
-- PulseMCP new-slug URL returns `404`
-- MCP Market new-slug URL returns `403` from this shell, so browser/manual verification is still required
-
-## Verification Checklist
-
-Run these before claiming the docs and launch surface are clean:
-
-```bash
-rg -n "single-model default|split routing only happens when the caller explicitly asks" README.md docs/FRONTEND_DESIGN_LOOP_MCP.md
-test -f docs/images/aca-site50-v9-fullpage-before.png
-test -f docs/images/aca-site50-v22-fullpage-after.png
-curl -sS 'https://registry.modelcontextprotocol.io/v0/servers?search=frontend-design-loop-mcp' | rg -n 'io.github.alexalexalex222/frontend-design-loop-mcp'
-curl -sS -L https://glama.ai/mcp/servers/@alexalexalex222/frontend-design-loop-mcp | rg -n "Petamind MCP|frontend-design-loop-mcp"
-curl -sS -L https://www.pulsemcp.com/servers/frontend-design-loop-mcp | rg -n "Page Not Found|frontend-design-loop-mcp"
-curl -sS -L -o /dev/null -w "%{http_code}\n" https://www.mcpmarket.com/server/frontend-design-loop-mcp
-```
-
-Repo-level verification expected after merge:
-
-```bash
-PYTHONPATH=src .venv/bin/python -m pytest -q --import-mode=importlib
-PYTHONPATH=src .venv/bin/python scripts/preflight_check.py
-PYTHONPATH=src .venv/bin/python scripts/smoke_mcp_stdio.py
-python -m build
-twine check dist/*
-```
-
-## Release Maintenance
-
-PyPI is already live. Keep the public install story anchored on:
-
-```bash
-pipx install frontend-design-loop-mcp
-frontend-design-loop-setup --install-all-detected-clients
-```
-
-1. bump version in `pyproject.toml`
-2. run the release checklist from `RELEASING.md`
-3. publish to PyPI
-4. verify `pipx install frontend-design-loop-mcp`
-5. refresh directory listings and public docs if the install or proof story changed
+After separately authorized publication, verify the published installation in a new
+environment and update directory submission copy to match the released tool surface.

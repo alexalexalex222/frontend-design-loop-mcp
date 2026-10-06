@@ -14,12 +14,12 @@ import time
 from typing import Any
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
 
 from frontend_design_loop_core.config import Config
 from frontend_design_loop_core.utils import log_warning
 
-from .base import CompletionResponse, LLMProvider, Message, ProviderFactory
+from .base import AuthPolicyError, CompletionResponse, LLMProvider, Message, ProviderFactory
 
 
 class GeminiProvider(LLMProvider):
@@ -189,6 +189,7 @@ class GeminiProvider(LLMProvider):
             return self._token
 
     @retry(
+        retry=retry_if_not_exception_type(AuthPolicyError),
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=2, max=60),
         reraise=True,
@@ -213,6 +214,11 @@ class GeminiProvider(LLMProvider):
         Returns:
             Completion response
         """
+        mode = self._validate_auth_mode(kwargs, allowed={"api_key", "configured", "adc"})
+        if mode != "configured" and mode != self.auth_mode:
+            raise AuthPolicyError(
+                f"Gemini auth_mode={mode} conflicts with the configured {self.auth_mode} route"
+            )
         async with self._concurrency:
             await self._throttle()
             headers = await self._get_headers()
@@ -226,10 +232,12 @@ class GeminiProvider(LLMProvider):
                     system_instruction = msg.content
                 else:
                     role = "user" if msg.role == "user" else "model"
-                    contents.append({
-                        "role": role,
-                        "parts": [{"text": msg.content}],
-                    })
+                    contents.append(
+                        {
+                            "role": role,
+                            "parts": [{"text": msg.content}],
+                        }
+                    )
 
             payload = {
                 "contents": contents,
@@ -278,6 +286,7 @@ class GeminiProvider(LLMProvider):
                 )
 
     @retry(
+        retry=retry_if_not_exception_type(AuthPolicyError),
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=2, max=60),
         reraise=True,
@@ -306,6 +315,11 @@ class GeminiProvider(LLMProvider):
         Returns:
             Completion response
         """
+        mode = self._validate_auth_mode(kwargs, allowed={"api_key", "configured", "adc"})
+        if mode != "configured" and mode != self.auth_mode:
+            raise AuthPolicyError(
+                f"Gemini auth_mode={mode} conflicts with the configured {self.auth_mode} route"
+            )
         async with self._concurrency:
             await self._throttle()
             headers = await self._get_headers()
@@ -316,12 +330,14 @@ class GeminiProvider(LLMProvider):
             # Add images as inline_data
             for img_bytes in images:
                 b64 = base64.b64encode(img_bytes).decode()
-                parts.append({
-                    "inline_data": {
-                        "mime_type": "image/png",
-                        "data": b64,
+                parts.append(
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": b64,
+                        }
                     }
-                })
+                )
 
             # Extract text from messages
             system_instruction = None

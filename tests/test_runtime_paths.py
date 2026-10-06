@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from frontend_design_loop_mcp import runtime_paths
 from frontend_design_loop_core import config as config_mod
+from frontend_design_loop_mcp import runtime_paths
 
 
 def test_load_config_uses_runtime_asset_helpers(tmp_path: Path, monkeypatch) -> None:

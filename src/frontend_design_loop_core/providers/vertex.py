@@ -7,12 +7,12 @@ from typing import Any
 import google.auth
 import google.auth.transport.requests
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
 
 from frontend_design_loop_core.config import Config
 from frontend_design_loop_core.utils import log_warning
 
-from .base import CompletionResponse, LLMProvider, Message, ProviderFactory
+from .base import AuthPolicyError, CompletionResponse, LLMProvider, Message, ProviderFactory
 
 
 class VertexProvider(LLMProvider):
@@ -131,6 +131,7 @@ class VertexProvider(LLMProvider):
             return self._token
 
     @retry(
+        retry=retry_if_not_exception_type(AuthPolicyError),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=30),
         reraise=True,
@@ -155,6 +156,7 @@ class VertexProvider(LLMProvider):
         Returns:
             Completion response
         """
+        self._validate_auth_mode(kwargs, allowed={"configured", "adc"})
         async with self._concurrency:
             token = await self._get_token()
 
@@ -242,18 +244,21 @@ class VertexProvider(LLMProvider):
         Returns:
             Completion response
         """
+        self._validate_auth_mode(kwargs, allowed={"configured", "adc"})
         # Build content blocks with images
         content_blocks = []
 
         # Add images first
         for img_bytes in images:
             b64 = base64.b64encode(img_bytes).decode()
-            content_blocks.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/png;base64,{b64}",
-                },
-            })
+            content_blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{b64}",
+                    },
+                }
+            )
 
         # Add text from last user message
         text_content = ""
@@ -263,14 +268,18 @@ class VertexProvider(LLMProvider):
                 break
 
         if text_content:
-            content_blocks.append({
-                "type": "text",
-                "text": text_content,
-            })
+            content_blocks.append(
+                {
+                    "type": "text",
+                    "text": text_content,
+                }
+            )
 
         # Build new messages with vision content
         vision_messages = [
-            m for m in messages if m.role == "system"  # Keep system messages
+            m
+            for m in messages
+            if m.role == "system"  # Keep system messages
         ]
         vision_messages.append(Message(role="user", content=content_blocks))
 

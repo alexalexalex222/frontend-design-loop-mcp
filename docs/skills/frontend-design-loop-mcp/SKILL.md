@@ -1,26 +1,20 @@
-# Frontend Design Loop MCP Skill Notes
+# Frontend design workflow notes for host agents
 
-Use Frontend Design Loop MCP when an interactive coding agent needs:
-- active frontend design improvement
-- isolated patch evaluation
-- deterministic gates
-- preview screenshots
-- machine-readable run artifacts
+Use the host-agent toolkit for native frontend edits, responsive image capture,
+local previews, focused interaction checks, and evidence-grounded review.
+Start with `get_playbook(name="solve")`; it defines the source/evidence workflow.
+The host owns source checkpoints, edits, independent review authorization, and
+complete delivery. Inspect returned image blocks rather than treating paths as
+visual evidence. Skipped/not_run/error checks remain unverified.
 
-Preferred tool:
-- `frontend_design_loop_design` for design improvement
-- `frontend_design_loop_eval` for proof-only verification
+Setup defaults to toolkit. Print configs before writing settings:
+`frontend-design-loop-setup --print-config` or `--print-codex-config`,
+`--print-claude-config`, `--print-opencode-config`. Explicit `--install-*` flags
+perform the chosen client installation. Use `--workflow automated` for the
+optional provider-driven server; retain explicit provider/model/effort/auth choices.
 
-Design workflow rule:
-- `frontend_design_loop_design` stays on one main provider/model by default
-- only split planning or vision onto other lanes when the caller explicitly overrides those fields
-
-Migration aliases still exist, but new docs and new clients should use the Frontend Design Loop names.
-
-Quick client setup helpers:
-- All detected: `frontend-design-loop-setup --install-all-detected-clients`
-- Claude: `frontend-design-loop-setup --install-claude --scope user`
-- Codex: `frontend-design-loop-setup --install-codex`
-- Gemini: `frontend-design-loop-setup --install-gemini`
-- Droid: `frontend-design-loop-setup --install-droid`
-- OpenCode: `frontend-design-loop-setup --install-opencode`
+For automated isolated patch evaluation use `frontend_design_loop_eval`.
+For provider-driven generation use `frontend_design_loop_design`. Read their current
+tool schemas. Model-backed execution needs a separately configured provider route;
+it is not required by the host-agent toolkit. Baseline/candidate evidence and
+functional verification do not establish subjective quality or human preference.

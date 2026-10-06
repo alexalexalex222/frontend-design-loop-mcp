@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import fnmatch
+import os
 import re
+import shutil
 from pathlib import Path
 
-from design_toolkit.utils import merge_unique, read_text, run_command
+from design_toolkit.utils import merge_unique, read_text
 
 _SENSITIVE_PATTERNS = (
     ".env",
@@ -135,8 +137,10 @@ def build_context_blob(
             continue
         path = (repo_root / rel).resolve()
         try:
-            path.relative_to(repo_resolved)
+            resolved_rel = path.relative_to(repo_resolved).as_posix()
         except Exception:
+            continue
+        if is_sensitive_path(resolved_rel):
             continue
 
         text = redact_sensitive_text(read_text(path, max_chars=max_file_chars))
@@ -176,8 +180,9 @@ async def auto_context_files(
     if not queries or max_files <= 0:
         return []
 
-    rc, out, _ = await run_command("command -v rg", cwd=repo_root, timeout_ms=5000)
-    has_rg = rc == 0 and bool((out or "").strip())
+    from frontend_design_loop_core.utils import run_command_argv
+
+    has_rg = bool(shutil.which("rg"))
 
     ignore_globs = [
         "!.git/**",
@@ -223,21 +228,51 @@ async def auto_context_files(
             break
 
         if has_rg:
-            from design_toolkit.utils import shlex_quote
-
-            glob_flags = " ".join(f"--glob {shlex_quote(glob)}" for glob in ignore_globs)
-            cmd = f"rg -l -F -i --hidden --no-messages {glob_flags} {shlex_quote(query)}"
+            args = ["rg", "-l", "-F", "-i", "--hidden", "--no-messages"]
+            for glob in ignore_globs:
+                args.extend(["--glob", glob])
+            args.extend(["--", query, "."])
+            rc, out, _ = await run_command_argv(args, cwd=repo_root, timeout_ms=30_000)
+            if rc in (0, 1) and out:
+                found.extend(_filter(out.splitlines()))
         else:
-            cmd = (
-                "grep -RIl --binary-files=without-match "
-                "--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=out "
-                "--exclude-dir=.venv --exclude-dir=venv --exclude-dir=__pycache__ "
-                "--exclude-dir=.next --exclude-dir=dist --exclude-dir=build "
-                f"{query} ."
-            )
-
-        rc, out, _ = await run_command(cmd, cwd=repo_root, timeout_ms=30_000)
-        if rc in (0, 1) and out:
-            found.extend(_filter(out.splitlines()))
+            # Portable fallback for machines without ripgrep; never construct shell text.
+            excluded = {
+                ".git",
+                "node_modules",
+                ".venv",
+                "venv",
+                "__pycache__",
+                "out",
+                ".next",
+                "dist",
+                "build",
+                "coverage",
+            }
+            scanned = 0
+            for directory, dirs, names in os.walk(repo_root):
+                dirs[:] = [
+                    name
+                    for name in dirs
+                    if name not in excluded and not (Path(directory) / name).is_symlink()
+                ]
+                for name in names:
+                    scanned += 1
+                    if scanned > 10_000:
+                        break
+                    path = Path(directory) / name
+                    rel = path.relative_to(repo_root).as_posix()
+                    if is_sensitive_path(rel) or path.is_symlink():
+                        continue
+                    try:
+                        if (
+                            path.stat().st_size <= 256_000
+                            and query.lower() in path.read_text(encoding="utf-8").lower()
+                        ):
+                            found.extend(_filter([rel]))
+                    except (OSError, UnicodeError):
+                        continue
+                if scanned > 10_000 or len(found) >= max_files:
+                    break
 
     return merge_unique(found)[:max_files]

@@ -33,16 +33,48 @@ def _cand(
 
 def test_select_winner_returns_none_when_no_candidate_passes() -> None:
     results = [
-        _cand(index=0, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=False, vision_score=7.9),
-        _cand(index=1, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=False, vision_score=7.5),
+        _cand(
+            index=0,
+            ok=True,
+            applied=True,
+            test_ok=True,
+            lint_ok=True,
+            vision_ok=False,
+            vision_score=7.9,
+        ),
+        _cand(
+            index=1,
+            ok=True,
+            applied=True,
+            test_ok=True,
+            lint_ok=True,
+            vision_ok=False,
+            vision_score=7.5,
+        ),
     ]
     assert _select_winner(results, allow_best_effort=False) is None
 
 
 def test_select_winner_best_effort_prefers_higher_vision_score() -> None:
     results = [
-        _cand(index=0, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=False, vision_score=7.9),
-        _cand(index=1, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=False, vision_score=8.1),
+        _cand(
+            index=0,
+            ok=True,
+            applied=True,
+            test_ok=True,
+            lint_ok=True,
+            vision_ok=False,
+            vision_score=7.9,
+        ),
+        _cand(
+            index=1,
+            ok=True,
+            applied=True,
+            test_ok=True,
+            lint_ok=True,
+            vision_ok=False,
+            vision_score=8.1,
+        ),
     ]
     winner = _select_winner(results, allow_best_effort=True)
     assert winner is not None
@@ -51,8 +83,24 @@ def test_select_winner_best_effort_prefers_higher_vision_score() -> None:
 
 def test_select_winner_prefers_passing_candidate_over_best_effort() -> None:
     results = [
-        _cand(index=0, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=False, vision_score=9.9),
-        _cand(index=1, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.0),
+        _cand(
+            index=0,
+            ok=True,
+            applied=True,
+            test_ok=True,
+            lint_ok=True,
+            vision_ok=False,
+            vision_score=9.9,
+        ),
+        _cand(
+            index=1,
+            ok=True,
+            applied=True,
+            test_ok=True,
+            lint_ok=True,
+            vision_ok=True,
+            vision_score=8.0,
+        ),
     ]
     winner = _select_winner(results, allow_best_effort=True)
     assert winner is not None
@@ -60,8 +108,12 @@ def test_select_winner_prefers_passing_candidate_over_best_effort() -> None:
 
 
 def test_select_winner_prefers_fewer_weak_sections_when_otherwise_tied() -> None:
-    a = _cand(index=0, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5)
-    b = _cand(index=1, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5)
+    a = _cand(
+        index=0, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5
+    )
+    b = _cand(
+        index=1, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5
+    )
     a.creativity_eval_ok = True
     a.creativity_weak = 2
     a.creativity_min = 0.4
@@ -77,8 +129,12 @@ def test_select_winner_prefers_fewer_weak_sections_when_otherwise_tied() -> None
 
 
 def test_select_winner_prefers_candidate_with_creativity_eval_when_enabled() -> None:
-    a = _cand(index=0, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5)
-    b = _cand(index=1, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5)
+    a = _cand(
+        index=0, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5
+    )
+    b = _cand(
+        index=1, ok=True, applied=True, test_ok=True, lint_ok=True, vision_ok=True, vision_score=8.5
+    )
     a.creativity_eval_ok = True
     a.creativity_weak = 0
     a.creativity_min = 0.8

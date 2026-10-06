@@ -1,39 +1,50 @@
 """MCP server for the Frontend Design Toolkit.
 
-This server is intentionally narrow:
-- It exposes playbooks that teach the agent how to work.
-- It exposes mechanical helpers the agent can call directly.
-
-It does NOT hide another evaluator, planner, or patch-writer behind MCP.
-The agent owns:
-- planning
-- subagent delegation
-- code edits
-- screenshot review
-- scoring
-- iteration
-- final selection
-
-The MCP only provides sharp tools plus instruction resources.
+The host agent owns planning and edits. Mechanical tools provide previews,
+gates and labeled screenshot evidence. review_design explicitly invokes a
+separately selected native CLI judge; no model call is hidden in capture or gates.
 """
 
 from __future__ import annotations
 
+import argparse
+import base64
+import json
 import os
-import uuid
+import tempfile
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import CallToolResult, ImageContent, TextContent
 
 from design_toolkit.tools import (
     context as ctx_mod,
+)
+from design_toolkit.tools import (
     gates as gates_mod,
+)
+from design_toolkit.tools import (
     preview as preview_mod,
+)
+from design_toolkit.tools import (
     screenshots as screens_mod,
 )
 
-mcp = FastMCP("frontend-design-toolkit")
+
+@asynccontextmanager
+async def _lifespan(server: FastMCP):
+    try:
+        yield {}
+    finally:
+        import anyio
+
+        with anyio.CancelScope(shield=True):
+            await preview_mod.preview_stop()
+
+
+mcp = FastMCP("frontend-design-toolkit", lifespan=_lifespan)
 
 _PLAYBOOKS_DIR = Path(__file__).parent / "playbooks"
 
@@ -105,8 +116,8 @@ async def get_playbook(name: str) -> dict[str, Any]:
 async def run_gates(
     repo_path: str,
     *,
-    test_command: str | None = None,
-    lint_command: str | None = None,
+    test_command: str | list[str] | None = None,
+    lint_command: str | list[str] | None = None,
     timeout_ms: int = 120_000,
     unsafe_shell: bool = False,
     auto_detect_test: bool = True,
@@ -127,16 +138,39 @@ async def run_gates(
         unsafe_shell=unsafe_shell,
     )
 
-    return {
-        "test_ok": result.test_ok,
-        "test_return_code": result.test_rc,
-        "test_stdout": result.test_stdout,
-        "test_stderr": result.test_stderr,
-        "lint_ok": result.lint_ok,
-        "lint_return_code": result.lint_rc,
-        "lint_stdout": result.lint_stdout,
-        "lint_stderr": result.lint_stderr,
-    }
+    return result.to_dict()
+
+
+@mcp.tool()
+async def review_design(
+    manifest_path: str,
+    goal: str,
+    provider: Literal["codex_cli", "claude_cli", "opencode_cli"],
+    model: str,
+    effort: str = "high",
+    baseline_manifest_path: str | None = None,
+    threshold: float = 8.0,
+    auth_mode: Literal["subscription", "configured"] = "subscription",
+) -> dict[str, Any]:
+    """Explicit independent design review through your logged-in native CLI.
+
+    Verifies screenshot hashes, supplies labeled candidate/baseline pixels, and
+    returns honest assessment plus requested/observed execution metadata. The
+    native judge runs in a temporary workspace with editing/execution disabled.
+    This call invokes the selected model; capture_screenshots alone does not.
+    """
+    from design_toolkit.tools.review import review_evidence
+
+    return await review_evidence(
+        manifest_path=Path(manifest_path),
+        goal=goal,
+        provider_name=provider,
+        model=model,
+        effort=effort,
+        threshold=threshold,
+        baseline_path=Path(baseline_manifest_path) if baseline_manifest_path else None,
+        auth_mode=auth_mode,
+    )
 
 
 @mcp.tool()
@@ -147,29 +181,74 @@ async def capture_screenshots(
     viewports: list[dict[str, Any]] | None = None,
     timeout_ms: int = 30_000,
     full_page: bool = True,
-) -> dict[str, Any]:
-    """Capture screenshots for the agent to inspect directly."""
-    if out_dir:
-        out_path = Path(out_dir)
-    else:
-        out_path = Path(
-            os.getenv("DESIGN_TOOLKIT_OUT_DIR", "/tmp/design-toolkit-screenshots")
-        ) / uuid.uuid4().hex[:8]
+    interactions: list[dict[str, Any]] | None = None,
+    evidence_label: str = "candidate",
+    source_revision: str | None = None,
+    include_images: bool = True,
+    asset_policy: Literal["same_origin", "public_assets"] = "public_assets",
+) -> CallToolResult:
+    """Capture a local page; return labeled MCP images and a durable evidence manifest.
 
-    screenshots = await screens_mod.capture_screenshots(
+    Interactions support click/fill/press/expect_visible/expect_text with selector
+    and optional value. Each viewport starts fresh. This is focused QA, not a
+    complete accessibility or design-quality verdict. No judge/model is invoked.
+    """
+    out_path = (
+        Path(out_dir)
+        if out_dir
+        else Path(
+            os.getenv(
+                "DESIGN_TOOLKIT_OUT_DIR",
+                str(Path(tempfile.gettempdir()) / "design-toolkit-screenshots"),
+            )
+        )
+    )
+    manifest = await screens_mod.capture_evidence(
         url=url,
         out_dir=out_path,
         viewports=viewports,
         timeout_ms=timeout_ms,
         full_page=full_page,
+        interactions=interactions,
+        evidence_label=evidence_label,
+        source_revision=source_revision,
+        asset_policy=asset_policy,
     )
-
-    return {"screenshots": screenshots, "out_dir": str(out_path)}
+    content: list[TextContent | ImageContent] = []
+    total = 0
+    for shot in manifest["screenshots"]:
+        if not include_images:
+            break
+        data = Path(shot["path"]).read_bytes()
+        total += len(data)
+        if total > 15_000_000:
+            content.append(
+                TextContent(
+                    type="text",
+                    text="Image return budget exceeded; remaining images are in the manifest paths.",
+                )
+            )
+            break
+        content.append(
+            TextContent(
+                type="text",
+                text=f"{evidence_label}: {shot['label']} / {shot['state']} (sha256 {shot['sha256']})",
+            )
+        )
+        content.append(
+            ImageContent(
+                type="image", data=base64.b64encode(data).decode("ascii"), mimeType="image/png"
+            )
+        )
+    content.insert(0, TextContent(type="text", text=json.dumps(manifest)))
+    return CallToolResult(
+        content=content, structuredContent=manifest, isError=manifest["status"] == "error"
+    )
 
 
 @mcp.tool()
 async def preview_start(
-    command: str,
+    command: str | list[str],
     cwd: str,
     *,
     port: int | None = None,
@@ -244,9 +323,19 @@ async def build_context(
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     """Run the MCP server via stdio transport."""
-    mcp.run(transport="stdio")
+    parser = argparse.ArgumentParser(prog="frontend-design-toolkit-mcp")
+    parser.add_argument("--version", action="store_true")
+    args = parser.parse_args(argv)
+    if args.version:
+        from frontend_design_loop_mcp import __version__
+
+        print(__version__)
+        return
+    from frontend_design_loop_core.lifecycle import run_stdio_server
+
+    run_stdio_server(mcp)
 
 
 if __name__ == "__main__":

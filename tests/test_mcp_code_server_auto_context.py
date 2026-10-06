@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import anyio
+import pytest
 
 from frontend_design_loop_core import mcp_code_server
 
@@ -30,10 +31,12 @@ def test_auto_context_files_uses_rg_when_available(tmp_path: Path, monkeypatch) 
             return 0, "src/foo.py\n../oops.py\n", ""
         return 1, "", ""
 
-    monkeypatch.setattr(mcp_code_server, "run_command", fake_run_command)
+    monkeypatch.setattr(mcp_code_server.shutil, "which", lambda binary: f"/usr/bin/{binary}")
 
     async def run():
-        return await mcp_code_server._auto_context_files(repo_root=repo, queries=["foo"], max_files=10)
+        return await mcp_code_server._auto_context_files(
+            repo_root=repo, queries=["foo"], max_files=10
+        )
 
     files = anyio.run(run)
     assert files == ["src/foo.py"]
@@ -52,10 +55,12 @@ def test_auto_context_files_excludes_sensitive_secret_paths(tmp_path: Path, monk
             return 0, ".env\nsrc/foo.py\n", ""
         return 1, "", ""
 
-    monkeypatch.setattr(mcp_code_server, "run_command", fake_run_command)
+    monkeypatch.setattr(mcp_code_server.shutil, "which", lambda binary: f"/usr/bin/{binary}")
 
     async def run():
-        return await mcp_code_server._auto_context_files(repo_root=repo, queries=["foo"], max_files=10)
+        return await mcp_code_server._auto_context_files(
+            repo_root=repo, queries=["foo"], max_files=10
+        )
 
     files = anyio.run(run)
     assert files == ["src/foo.py"]
@@ -70,11 +75,33 @@ def test_maybe_symlink_reuse_dirs_creates_symlink(tmp_path: Path) -> None:
     (repo / "node_modules").mkdir()
     (repo / "node_modules" / "x.txt").write_text("x", encoding="utf-8")
 
+    probe = tmp_path / "symlink-probe"
+    try:
+        probe.symlink_to(repo / "node_modules", target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Directory symlink privileges unavailable; denied reuse is tested separately")
+    probe.unlink()
+
     created = mcp_code_server._maybe_symlink_reuse_dirs(
         repo_root=repo, worktree=worktree, reuse_dirs=["node_modules"]
     )
     assert created == ["node_modules"]
     assert (worktree / "node_modules").is_symlink()
+
+
+def test_maybe_symlink_reuse_dirs_tolerates_missing_privilege(tmp_path: Path, monkeypatch) -> None:
+    repo, worktree = tmp_path / "repo", tmp_path / "worktree"
+    (repo / "node_modules").mkdir(parents=True)
+    worktree.mkdir()
+
+    def denied(*args, **kwargs):
+        raise PermissionError("Directory symlink creation denied")
+
+    monkeypatch.setattr(Path, "symlink_to", denied)
+    assert mcp_code_server._maybe_symlink_reuse_dirs(
+        repo_root=repo, worktree=worktree, reuse_dirs=["node_modules"]
+    ) == []
+    assert not (worktree / "node_modules").exists()
 
 
 def test_build_context_blob_truncates_total_chars(tmp_path: Path) -> None:
@@ -97,14 +124,14 @@ def test_build_context_blob_skips_sensitive_files(tmp_path: Path) -> None:
     (repo / ".env").write_text("API_KEY=secret\n", encoding="utf-8")
     (repo / ".git").mkdir()
     (repo / ".git" / "config").write_text(
-        "[remote \"origin\"]\nurl = https://token@example.com/repo.git\n",
+        '[remote "origin"]\nurl = https://token@example.com/repo.git\n',
         encoding="utf-8",
     )
     (repo / ".docker").mkdir()
-    (repo / ".docker" / "config.json").write_text("{\"auths\": {}}\n", encoding="utf-8")
+    (repo / ".docker" / "config.json").write_text('{"auths": {}}\n', encoding="utf-8")
     (repo / ".kube").mkdir()
     (repo / ".kube" / "config").write_text("apiVersion: v1\n", encoding="utf-8")
-    (repo / "service-account.json").write_text("{\"type\": \"service_account\"}\n", encoding="utf-8")
+    (repo / "service-account.json").write_text('{"type": "service_account"}\n', encoding="utf-8")
     (repo / "oauth_token.txt").write_text("token\n", encoding="utf-8")
     (repo / "safe.txt").write_text("safe\n", encoding="utf-8")
 
@@ -142,7 +169,7 @@ def test_sensitive_context_path_matches_common_credential_stores() -> None:
 
 def test_infer_test_command_prefers_pnpm_when_lock_present(tmp_path: Path, monkeypatch) -> None:
     repo = tmp_path
-    (repo / "package.json").write_text("{}", encoding="utf-8")
+    (repo / "package.json").write_text('{"scripts":{"test":"node test.js"}}', encoding="utf-8")
     (repo / "pnpm-lock.yaml").write_text("lock", encoding="utf-8")
 
     async def fake_run_command(cmd: str, cwd=None, timeout_ms=120000, capture_output=True):
@@ -155,19 +182,19 @@ def test_infer_test_command_prefers_pnpm_when_lock_present(tmp_path: Path, monke
                 return 1, "", ""
         return 1, "", ""
 
-    monkeypatch.setattr(mcp_code_server, "run_command", fake_run_command)
+    monkeypatch.setattr(mcp_code_server.shutil, "which", lambda binary: f"/usr/bin/{binary}")
 
     async def run():
         return await mcp_code_server._infer_test_command(repo)
 
     cmd, reason = anyio.run(run)
-    assert cmd == "pnpm test"
-    assert "pnpm" in reason.lower()
+    assert cmd == "pnpm run test"
+    assert "script" in reason.lower()
 
 
 def test_infer_test_command_uses_pytest_when_python_signals(tmp_path: Path, monkeypatch) -> None:
     repo = tmp_path
-    (repo / "pyproject.toml").write_text("[project]\nname = 'x'\n", encoding="utf-8")
+    (repo / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
 
     async def fake_run_command(cmd: str, cwd=None, timeout_ms=120000, capture_output=True):
         if cmd.startswith("command -v "):
@@ -175,23 +202,23 @@ def test_infer_test_command_uses_pytest_when_python_signals(tmp_path: Path, monk
                 return 0, "/usr/bin/pytest\n", ""
         return 1, "", ""
 
-    monkeypatch.setattr(mcp_code_server, "run_command", fake_run_command)
+    monkeypatch.setattr(mcp_code_server.shutil, "which", lambda binary: f"/usr/bin/{binary}")
 
     async def run():
         return await mcp_code_server._infer_test_command(repo)
 
     cmd, reason = anyio.run(run)
     assert cmd == "pytest -q"
-    assert "python" in reason.lower()
+    assert "pytest" in reason.lower()
 
 
-def test_infer_test_command_defaults_to_true_when_unknown_repo(tmp_path: Path) -> None:
+def test_infer_test_command_skips_when_unknown_repo(tmp_path: Path) -> None:
     async def run():
         return await mcp_code_server._infer_test_command(tmp_path)
 
     cmd, reason = anyio.run(run)
-    assert cmd == "true"
-    assert "skipping" in reason.lower()
+    assert cmd is None
+    assert "skipped" in reason.lower()
 
 
 def test_pick_preview_port_caps_attempts_to_stride(tmp_path: Path, monkeypatch) -> None:
@@ -203,7 +230,9 @@ def test_pick_preview_port_caps_attempts_to_stride(tmp_path: Path, monkeypatch) 
 
     monkeypatch.setattr(mcp_code_server, "find_available_port", fake_find_available_port)
     monkeypatch.setenv("FRONTEND_DESIGN_LOOP_MCP_PORT_STRIDE", "25")
-    monkeypatch.setenv("FRONTEND_DESIGN_LOOP_MCP_PORT_ATTEMPTS", "1000")  # should be capped to stride
+    monkeypatch.setenv(
+        "FRONTEND_DESIGN_LOOP_MCP_PORT_ATTEMPTS", "1000"
+    )  # should be capped to stride
 
     port = mcp_code_server._pick_preview_port(idx=2, port_start_base=3000)
     assert port == 3051

@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import anyio
@@ -28,7 +29,16 @@ def _make_repo(tmp_path: Path) -> Path:
     _git(repo, "init")
     _git(repo, "add", "hello.txt")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -42,6 +52,11 @@ def test_frontend_design_loop_solve_rejects_host_agent_mode(tmp_path: Path) -> N
 
     async def run() -> None:
         await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello world",
             solver_mode="host_agent",
@@ -56,6 +71,10 @@ def test_frontend_design_loop_solve_rejects_shell_commands_by_default(tmp_path: 
 
     async def run() -> None:
         await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello world",
             solver_mode="host_cli",
@@ -90,13 +109,18 @@ def test_frontend_design_loop_design_requires_preview(tmp_path: Path) -> None:
         anyio.run(run)
 
 
-def test_frontend_design_loop_design_wraps_solve_with_design_defaults(tmp_path: Path, monkeypatch) -> None:
+def test_frontend_design_loop_design_wraps_solve_with_design_defaults(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = _make_repo(tmp_path)
     captured: dict[str, object] = {}
 
     async def fake_solve(**kwargs):
         captured.update(kwargs)
-        return {"winner": {"patch": "diff --git a/file b/file"}, "solver_mode": kwargs["solver_mode"]}
+        return {
+            "winner": {"patch": "diff --git a/file b/file"},
+            "solver_mode": kwargs["solver_mode"],
+        }
 
     monkeypatch.setattr(mcp_code_server, "frontend_design_loop_solve", fake_solve)
 
@@ -113,7 +137,7 @@ def test_frontend_design_loop_design_wraps_solve_with_design_defaults(tmp_path: 
     result = anyio.run(run)
     assert result["design_mode"] == "active_design_pass"
     assert captured["solver_mode"] == "host_cli"
-    assert captured["planning_mode"] == "single"
+    assert captured["planning_mode"] == "off"
     assert captured["provider"] == "gemini_cli"
     assert captured["model"] == "gemini-3.1-pro-preview"
     assert captured["vision_mode"] == "on"
@@ -121,19 +145,25 @@ def test_frontend_design_loop_design_wraps_solve_with_design_defaults(tmp_path: 
     assert captured["vision_model"] == "gemini-3.1-pro-preview"
     assert captured["planner_provider"] == "gemini_cli"
     assert captured["planner_model"] == "gemini-3.1-pro-preview"
-    assert captured["section_creativity_mode"] == "on"
+    assert captured["section_creativity_mode"] == "off"
     assert captured["section_creativity_model"] == "gemini-3.1-pro-preview"
-    assert captured["temperature_schedule"] == [0.28, 0.62, 0.96]
+    assert captured["max_candidates"] == 1
+    assert captured["temperature_schedule"] == [0.72]
     assert result["design_defaults"]["single_model_default"] is True
 
 
-def test_frontend_design_loop_design_allows_explicit_split_overrides(tmp_path: Path, monkeypatch) -> None:
+def test_frontend_design_loop_design_allows_explicit_split_overrides(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = _make_repo(tmp_path)
     captured: dict[str, object] = {}
 
     async def fake_solve(**kwargs):
         captured.update(kwargs)
-        return {"winner": {"patch": "diff --git a/file b/file"}, "solver_mode": kwargs["solver_mode"]}
+        return {
+            "winner": {"patch": "diff --git a/file b/file"},
+            "solver_mode": kwargs["solver_mode"],
+        }
 
     monkeypatch.setattr(mcp_code_server, "frontend_design_loop_solve", fake_solve)
 
@@ -182,7 +212,7 @@ def test_kilo_optional_polish_policy_is_banded() -> None:
         vision_report=passing_report,
         vision_ok=True,
         threshold=8.0,
-    ) == (False, False, "kilo optional polish skipped: initial vision already passed")
+    ) == (False, False, "Optional polishing skipped: the inspected candidate already passed")
 
     assert mcp_code_server._kilo_optional_polish_policy(
         provider_name="kilo_cli",
@@ -207,7 +237,8 @@ def test_frontend_design_loop_solve_host_cli_offline(tmp_path: Path, monkeypatch
     out_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("FRONTEND_DESIGN_LOOP_MCP_OUT_DIR", str(out_dir))
 
-    async def fake_run_cli(self, *, args, cwd, env, timeout_s, output_file=None):
+    async def fake_run_cli(self, messages, model, **kwargs):
+        args, cwd, env, timeout_s, output_file = [], None, {}, 1, None
         _ = (self, args, cwd, env, timeout_s)
         content = (
             '{"patches":['
@@ -225,19 +256,25 @@ def test_frontend_design_loop_solve_host_cli_offline(tmp_path: Path, monkeypatch
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
             "score": {"score": 10.0},
         }
 
-    monkeypatch.setattr(CodexCLIProvider, "_run_cli", fake_run_cli)
+    monkeypatch.setattr(CodexCLIProvider, "complete", fake_run_cli)
     monkeypatch.setattr(mcp_code_server, "_capture_diff_screenshots", fake_capture_diff_screenshots)
     monkeypatch.setattr(mcp_code_server, "_vision_eval", fake_vision_eval)
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello host cli",
             solver_mode="host_cli",
@@ -247,15 +284,16 @@ def test_frontend_design_loop_solve_host_cli_offline(tmp_path: Path, monkeypatch
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="auto",
             vision_provider="anthropic_vertex",
             section_creativity_mode="off",
             apply_to_repo=False,
-            allow_nonpassing_winner=False,
+            allow_nonpassing_winner=True,
         )
 
     result = anyio.run(run)
+    assert result["winner_passes_all"] is False
     assert result["solver_mode"] == "host_cli"
     assert result["winner"] is not None
     assert "hello host cli" in result["winner"]["patch"]
@@ -267,7 +305,8 @@ def test_frontend_design_loop_solve_host_cli_offline_with_kilo(tmp_path: Path, m
     out_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("FRONTEND_DESIGN_LOOP_MCP_OUT_DIR", str(out_dir))
 
-    async def fake_run_cli(self, *, args, cwd, env, timeout_s, output_file=None):
+    async def fake_run_cli(self, messages, model, **kwargs):
+        args, cwd, env, timeout_s, output_file = [], None, {}, 1, None
         _ = (self, args, cwd, env, timeout_s, output_file)
         content = (
             '{"patches":['
@@ -283,19 +322,25 @@ def test_frontend_design_loop_solve_host_cli_offline_with_kilo(tmp_path: Path, m
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
             "score": {"score": 10.0},
         }
 
-    monkeypatch.setattr(KiloCLIProvider, "_run_cli", fake_run_cli)
+    monkeypatch.setattr(KiloCLIProvider, "complete", fake_run_cli)
     monkeypatch.setattr(mcp_code_server, "_capture_diff_screenshots", fake_capture_diff_screenshots)
     monkeypatch.setattr(mcp_code_server, "_vision_eval", fake_vision_eval)
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello kilo host cli",
             solver_mode="host_cli",
@@ -305,21 +350,24 @@ def test_frontend_design_loop_solve_host_cli_offline_with_kilo(tmp_path: Path, m
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="auto",
             vision_provider="anthropic_vertex",
             section_creativity_mode="off",
             apply_to_repo=False,
-            allow_nonpassing_winner=False,
+            allow_nonpassing_winner=True,
         )
 
     result = anyio.run(run)
+    assert result["winner_passes_all"] is False
     assert result["solver_mode"] == "host_cli"
     assert result["winner"] is not None
     assert "hello kilo host cli" in result["winner"]["patch"]
 
 
-def test_frontend_design_loop_solve_marks_proxy_structural_vision_lanes(tmp_path: Path, monkeypatch) -> None:
+def test_frontend_design_loop_solve_marks_proxy_structural_vision_lanes(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = _make_repo(tmp_path)
     out_dir = tmp_path / "out"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -367,7 +415,9 @@ def test_frontend_design_loop_solve_marks_proxy_structural_vision_lanes(tmp_path
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
@@ -380,6 +430,10 @@ def test_frontend_design_loop_solve_marks_proxy_structural_vision_lanes(tmp_path
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello proxy lane",
             planning_mode="off",
@@ -389,7 +443,7 @@ def test_frontend_design_loop_solve_marks_proxy_structural_vision_lanes(tmp_path
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="auto",
             vision_provider="kilo_cli",
             vision_model="kilo/minimax/minimax-m2.5:free",
@@ -401,11 +455,13 @@ def test_frontend_design_loop_solve_marks_proxy_structural_vision_lanes(tmp_path
     result = anyio.run(run)
     assert result["winner"] is not None
     assert result["winner_passes_all"] is False
-    assert result["winner"]["vision_review_mode"] == "proxy_structural"
-    assert result["winner"]["vision_score"] is None
+    assert result["winner"]["vision_review_mode"] == "automated"
+    assert result["winner"]["vision_score"] == 9.3
 
 
-def test_frontend_design_loop_solve_host_cli_auto_tunes_kilo_defaults(tmp_path: Path, monkeypatch) -> None:
+def test_frontend_design_loop_solve_preserves_selected_kilo_defaults(
+    tmp_path: Path, monkeypatch
+) -> None:
     repo = _make_repo(tmp_path)
     out_dir = tmp_path / "out"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -462,7 +518,9 @@ def test_frontend_design_loop_solve_host_cli_auto_tunes_kilo_defaults(tmp_path: 
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         return {
             "broken": {"broken": False, "confidence": 1.0, "reasons": []},
@@ -472,10 +530,18 @@ def test_frontend_design_loop_solve_host_cli_auto_tunes_kilo_defaults(tmp_path: 
     monkeypatch.setattr(mcp_code_server, "_call_llm_json", fake_call_llm_json)
     monkeypatch.setattr(mcp_code_server, "_capture_diff_screenshots", fake_capture_diff_screenshots)
     monkeypatch.setattr(mcp_code_server, "_vision_eval", fake_vision_eval)
-    monkeypatch.setattr(mcp_code_server, "_native_cli_command_available", lambda provider_name: provider_name == "codex_cli")
+    monkeypatch.setattr(
+        mcp_code_server,
+        "_native_cli_command_available",
+        lambda provider_name: provider_name == "codex_cli",
+    )
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello kilo tuned",
             solver_mode="host_cli",
@@ -484,7 +550,7 @@ def test_frontend_design_loop_solve_host_cli_auto_tunes_kilo_defaults(tmp_path: 
             max_candidates=2,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="auto",
             vision_provider="codex_cli",
             vision_model="gpt-5.4",
@@ -494,18 +560,12 @@ def test_frontend_design_loop_solve_host_cli_auto_tunes_kilo_defaults(tmp_path: 
 
     result = anyio.run(run)
     assert result["winner"] is not None
-    assert seen["planner_provider"] == "codex_cli"
-    assert seen["planner_model"] == "gpt-5.4"
-
-    request_payload = json.loads((Path(result["run_dir"]) / "request.json").read_text(encoding="utf-8"))
-    assert request_payload["planning_mode"] == "single"
-    assert request_payload["planner_provider"] == "codex_cli"
-    assert request_payload["planner_model"] == "gpt-5.4"
-    assert request_payload["temperature_schedule"] == [0.45, 0.82]
-    assert "kilo_minimax_default_planner=codex_cli/gpt-5.4 single" in request_payload["runtime_tuning_notes"]
-    assert "kilo_minimax_patch_generator_variant=high" in request_payload["runtime_tuning_notes"]
-    assert "kilo_minimax_patch_timeout=1200s_multi_candidate" in request_payload["runtime_tuning_notes"]
-    assert (
-        "kilo_minimax_optional_polish=banded (skip passers; salvage only near-threshold)"
-        in request_payload["runtime_tuning_notes"]
+    assert seen["planner_provider"] is None
+    assert seen["planner_model"] is None
+    request_payload = json.loads(
+        (Path(result["run_dir"]) / "request.json").read_text(encoding="utf-8")
     )
+    assert request_payload["planning_mode"] == "off"
+    assert request_payload["planner_provider"] == "kilo_cli"
+    assert request_payload["planner_model"] == "kilo/minimax/minimax-m2.5:free"
+    assert request_payload["runtime_tuning_notes"] == []

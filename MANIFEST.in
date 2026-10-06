@@ -1,2 +1,6 @@
 graft src/frontend_design_loop_mcp/assets
 graft src/design_toolkit/playbooks
+include scripts/verify_installed_package.py
+include scripts/smoke_mcp_stdio.py
+include scripts/smoke_toolkit_stdio.py
+include docs/WINDOWS_VERIFICATION.md

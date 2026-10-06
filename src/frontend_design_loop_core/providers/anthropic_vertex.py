@@ -11,12 +11,12 @@ from typing import Any
 import google.auth
 import google.auth.transport.requests
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
 
 from frontend_design_loop_core.config import Config
 from frontend_design_loop_core.utils import log_warning
 
-from .base import CompletionResponse, LLMProvider, Message, ProviderFactory
+from .base import AuthPolicyError, CompletionResponse, LLMProvider, Message, ProviderFactory
 
 
 class AnthropicVertexProvider(LLMProvider):
@@ -65,8 +65,7 @@ class AnthropicVertexProvider(LLMProvider):
             location = region
 
         return (
-            f"{base}/v1/projects/{self.project}/locations/{location}/"
-            f"{model_path}:streamRawPredict"
+            f"{base}/v1/projects/{self.project}/locations/{location}/{model_path}:streamRawPredict"
         )
 
     def _parse_response_json(self, response: httpx.Response) -> dict[str, Any]:
@@ -143,10 +142,12 @@ class AnthropicVertexProvider(LLMProvider):
             else:
                 content = self._flatten_text_blocks(msg.content)
 
-            anthropic_messages.append({
-                "role": msg.role,
-                "content": content,
-            })
+            anthropic_messages.append(
+                {
+                    "role": msg.role,
+                    "content": content,
+                }
+            )
 
         system = "\n\n".join([p for p in system_parts if p.strip()]).strip()
         return system, anthropic_messages
@@ -177,6 +178,7 @@ class AnthropicVertexProvider(LLMProvider):
         return ""
 
     @retry(
+        retry=retry_if_not_exception_type(AuthPolicyError),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=30),
         reraise=True,
@@ -189,6 +191,7 @@ class AnthropicVertexProvider(LLMProvider):
         temperature: float = 0.7,
         **kwargs: Any,
     ) -> CompletionResponse:
+        self._validate_auth_mode(kwargs, allowed={"configured", "adc"})
         async with self._concurrency:
             token = await self._get_token()
             headers = {
@@ -215,8 +218,7 @@ class AnthropicVertexProvider(LLMProvider):
 
             if response.status_code != 200:
                 raise RuntimeError(
-                    f"Anthropic Vertex API error {response.status_code}: "
-                    f"{response.text[:500]}"
+                    f"Anthropic Vertex API error {response.status_code}: {response.text[:500]}"
                 )
 
             data = self._parse_response_json(response)
@@ -241,6 +243,7 @@ class AnthropicVertexProvider(LLMProvider):
         temperature: float = 0.1,
         **kwargs: Any,
     ) -> CompletionResponse:
+        self._validate_auth_mode(kwargs, allowed={"configured", "adc"})
         async with self._concurrency:
             token = await self._get_token()
             headers = {
@@ -262,20 +265,24 @@ class AnthropicVertexProvider(LLMProvider):
             content_blocks: list[dict] = []
             for img_bytes in images:
                 b64 = base64.b64encode(img_bytes).decode("utf-8")
-                content_blocks.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/png",
-                        "data": b64,
-                    },
-                })
+                content_blocks.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": b64,
+                        },
+                    }
+                )
 
             if user_text:
-                content_blocks.append({
-                    "type": "text",
-                    "text": user_text,
-                })
+                content_blocks.append(
+                    {
+                        "type": "text",
+                        "text": user_text,
+                    }
+                )
 
             anthropic_messages = [
                 {
@@ -302,8 +309,7 @@ class AnthropicVertexProvider(LLMProvider):
 
             if response.status_code != 200:
                 raise RuntimeError(
-                    f"Anthropic Vertex API error {response.status_code}: "
-                    f"{response.text[:500]}"
+                    f"Anthropic Vertex API error {response.status_code}: {response.text[:500]}"
                 )
 
             data = self._parse_response_json(response)

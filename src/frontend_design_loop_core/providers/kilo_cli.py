@@ -41,7 +41,11 @@ class KiloCLIProvider(NativeCLIProvider):
             variant = "max"
         if variant == "off":
             variant = "minimal"
-        if "minimax" in str(model or "").strip().lower() and role == "patch_generator" and variant == "max":
+        if (
+            "minimax" in str(model or "").strip().lower()
+            and role == "patch_generator"
+            and variant == "max"
+        ):
             variant = "high"
         args = [
             self.cli_name,
@@ -163,7 +167,9 @@ class KiloCLIProvider(NativeCLIProvider):
             except json.JSONDecodeError:
                 continue
             if payload.get("type") == "error":
-                detail = str(payload.get("message") or payload.get("error") or "unknown kilo error").strip()
+                detail = str(
+                    payload.get("message") or payload.get("error") or "unknown kilo error"
+                ).strip()
                 raise RuntimeError(f"{self.name} failed: {detail}")
             if payload.get("type") != "text":
                 continue

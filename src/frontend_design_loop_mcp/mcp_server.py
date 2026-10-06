@@ -12,6 +12,7 @@ import os
 
 from frontend_design_loop_mcp import __version__
 
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="frontend-design-loop-mcp",

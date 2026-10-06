@@ -1,11 +1,15 @@
 """Base provider interface for LLM APIs."""
 
 from abc import ABC, abstractmethod
-from typing import ClassVar
 from dataclasses import dataclass
-from typing import Any, Literal
+from importlib import import_module
+from typing import Any, ClassVar, Literal
 
 from frontend_design_loop_core.config import Config
+
+
+class AuthPolicyError(ValueError):
+    """The selected route cannot satisfy the caller's authentication policy."""
 
 
 @dataclass
@@ -35,6 +39,21 @@ class LLMProvider(ABC):
     """Abstract base class for LLM providers."""
 
     cache_scope: ClassVar[Literal["singleton", "none"]] = "singleton"
+    supports_repository_edit: ClassVar[bool] = False
+
+    def _validate_auth_mode(self, kwargs: dict[str, Any], *, allowed: set[str]) -> str:
+        mode = str(kwargs.get("auth_mode") or "configured").strip().lower()
+        if mode not in allowed:
+            raise AuthPolicyError(
+                f"{self.name} cannot satisfy auth_mode={mode}; explicitly choose one of {', '.join(sorted(allowed))} for this route"
+            )
+        return mode
+
+    async def edit_repository(
+        self, messages: list[Message], model: str, repo_path: str, **kwargs: Any
+    ) -> CompletionResponse:
+        """Optional native editing; API providers retain the patch workflow."""
+        raise NotImplementedError(f"{self.name} does not support native repository editing")
 
     @abstractmethod
     async def complete(
@@ -96,6 +115,12 @@ class ProviderFactory:
 
     _providers: dict[str, type[LLMProvider]] = {}
     _instances: dict[str, LLMProvider] = {}
+    _lazy_providers: dict[str, str] = {}
+
+    @classmethod
+    def register_lazy(cls, name: str, module: str) -> None:
+        """Register optional cloud routes without importing their dependencies."""
+        cls._lazy_providers[name] = module
 
     @classmethod
     def register(cls, name: str, provider_class: type[LLMProvider]) -> None:
@@ -118,6 +143,17 @@ class ProviderFactory:
         Returns:
             Provider instance
         """
+        if name not in cls._providers and name in cls._lazy_providers:
+            try:
+                import_module(cls._lazy_providers[name])
+            except ModuleNotFoundError as exc:
+                if exc.name and (
+                    exc.name.startswith("google") or exc.name in {"tenacity", "requests"}
+                ):
+                    raise ValueError(
+                        f"{name} requires optional cloud dependencies; install frontend-design-loop-mcp[cloud]"
+                    ) from exc
+                raise
         if name not in cls._providers:
             raise ValueError(f"Unknown provider: {name}")
 

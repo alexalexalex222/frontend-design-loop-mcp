@@ -1,7 +1,6 @@
 import pytest
 
-from frontend_design_loop_mcp import __version__
-from frontend_design_loop_mcp import mcp_server
+from frontend_design_loop_mcp import __version__, mcp_server
 
 
 def test_mcp_server_help_exits_cleanly(capsys) -> None:

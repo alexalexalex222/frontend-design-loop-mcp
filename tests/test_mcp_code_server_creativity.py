@@ -44,4 +44,3 @@ def test_section_creativity_metrics_dedupes_and_excludes_strong_from_weak() -> N
     )
     assert strong == ["hero"]
     assert weak == ["features"]
-

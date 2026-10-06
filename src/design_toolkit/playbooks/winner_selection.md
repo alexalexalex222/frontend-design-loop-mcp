@@ -1,53 +1,18 @@
-# Winner Selection Playbook - Agent-Owned Final Choice
+# Choose and deliver the best verified state
 
-After all candidates have been built, checked, and reviewed, pick the winner yourself.
+Define required checks and acceptance criteria from the task before selection.
+A required failed check blocks acceptance. Skipped/not_run checks are unverified;
+error indicates an execution/evidence failure. Optional omissions need an explicit
+limitation. Missing visual evidence or a failed judge is not a visual failure.
 
-The MCP does not rank candidates for you.
+Among eligible states, choose the one best supported to serve the audience and
+brief. Compare consistent images, task outcomes, preserved strengths, material
+risks, and remaining uncertainty. Use novelty only when it advances the brief.
+Keep the baseline when no candidate establishes an improvement.
 
----
-
-## Priority Order
-
-For candidates that are actually viable:
-
-1. deterministic gates
-2. your screenshot review score
-3. your creativity section breakdown
-4. severity of remaining issues
-5. diff scope
-6. number of fix rounds
-
----
-
-## Passing Candidate
-
-A strong winner usually has:
-- deterministic gates passing or justified
-- screenshot review score `>= 8.0`
-- no broken states
-- few or no weak sections
-- at least one memorable signature move
-
----
-
-## Best-Effort Candidate
-
-If nothing fully passes:
-- prefer the candidate with the cleanest deterministic state
-- then prefer the best screenshot review score
-- then prefer the one with the clearest recovery path
-
-Do not let a flashy but broken candidate beat a stable one.
-
----
-
-## What to Report
-
-When you choose the winner, include:
-- which candidate won
-- why it won
-- your final score
-- section creativity breakdown
-- gate results
-- screenshot paths
-- remaining caveats
+Restore the chosen source checkpoint using the host's existing workflow, verify
+that it corresponds to the inspected evidence, and capture again after any final
+changes. Deliver complete source changes including new files, manifest/image
+pointers, required check results, and limitations. Identify self-review versus
+independent review. Do not claim human preference or universal quality from model
+scores. Stop all owned previews and explain any unmet requirement.

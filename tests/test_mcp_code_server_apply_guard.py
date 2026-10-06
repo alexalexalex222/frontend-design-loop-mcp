@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from pathlib import Path
 
 import anyio
@@ -25,7 +26,16 @@ def test_apply_to_repo_skips_when_winner_is_best_effort(tmp_path: Path, monkeypa
     _git(repo, "init")
     _git(repo, "add", "hello.txt")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -62,20 +72,27 @@ def test_apply_to_repo_skips_when_winner_is_best_effort(tmp_path: Path, monkeypa
             prompt_role,
         )
         return {
-            "patches": [
-                {"path": "hello.txt", "patch": "@@ -1,1 +1,1 @@\n-hello\n+hello world\n"}
-            ],
+            "patches": [{"path": "hello.txt", "patch": "@@ -1,1 +1,1 @@\n-hello\n+hello world\n"}],
             "notes": ["stub patch"],
         }
 
-    async def fake_capture_screenshots(*, url: str, out_dir: Path, viewports, timeout_ms: int, unsafe_external_preview: bool = False):
+    async def fake_capture_screenshots(
+        *,
+        url: str,
+        out_dir: Path,
+        viewports,
+        timeout_ms: int,
+        unsafe_external_preview: bool = False,
+    ):
         _ = (url, viewports, timeout_ms)
         out_dir.mkdir(parents=True, exist_ok=True)
         p = out_dir / "desktop.png"
         p.write_bytes(b"fake")
         return [p]
 
-    async def fake_vision_eval(*, images, goal, threshold, provider_name, model, min_confidence, kind):
+    async def fake_vision_eval(
+        *, images, goal, threshold, provider_name, model, min_confidence, kind
+    ):
         _ = (images, goal, threshold, provider_name, model, min_confidence, kind)
         # Not broken, but score below threshold => vision_ok False.
         return {"broken": {"broken": False, "confidence": 1.0}, "score": {"score": 0.0}}
@@ -87,6 +104,11 @@ def test_apply_to_repo_skips_when_winner_is_best_effort(tmp_path: Path, monkeypa
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="Change hello to hello world",
             planning_mode="off",
@@ -94,7 +116,7 @@ def test_apply_to_repo_skips_when_winner_is_best_effort(tmp_path: Path, monkeypa
             max_candidates=1,
             candidate_concurrency=1,
             max_fix_rounds=0,
-            test_command="true",
+            test_command=[sys.executable, "--version"],
             vision_mode="on",
             preview_command="python3 -m http.server {port}",
             preview_url="http://127.0.0.1:{port}/",
@@ -121,6 +143,7 @@ def test_apply_patch_bundle_accepts_full_file_replacement(tmp_path: Path) -> Non
 
     async def run():
         return await mcp_code_server._apply_patch_bundle(
+            isolated=True,
             repo_root=repo,
             patches=[{"path": "hello.txt", "patch": "hello world\n"}],
         )
@@ -151,6 +174,7 @@ def test_apply_patch_bundle_repairs_obvious_missing_hunk_prefixes(tmp_path: Path
 
     async def run():
         return await mcp_code_server._apply_patch_bundle(
+            isolated=True,
             repo_root=repo,
             patches=[{"path": "styles.css", "patch": malformed_patch}],
         )
@@ -171,7 +195,16 @@ def test_apply_patch_bundle_accepts_recountable_git_diff(tmp_path: Path) -> None
     _git(repo, "init")
     _git(repo, "add", "hello.txt")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -190,6 +223,7 @@ def test_apply_patch_bundle_accepts_recountable_git_diff(tmp_path: Path) -> None
 
     async def run():
         return await mcp_code_server._apply_patch_bundle(
+            isolated=True,
             repo_root=repo,
             patches=[{"path": "hello.txt", "patch": recount_patch}],
         )
@@ -204,14 +238,23 @@ def test_apply_patch_bundle_merges_multiple_diff_entries_for_same_file(tmp_path:
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "index.html").write_text(
-        "<main>\n  <section class=\"hero\"></section>\n  <section class=\"proof\"></section>\n</main>\n",
+        '<main>\n  <section class="hero"></section>\n  <section class="proof"></section>\n</main>\n',
         encoding="utf-8",
     )
 
     _git(repo, "init")
     _git(repo, "add", "index.html")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -220,15 +263,16 @@ def test_apply_patch_bundle_merges_multiple_diff_entries_for_same_file(tmp_path:
 
     async def run():
         return await mcp_code_server._apply_patch_bundle(
+            isolated=True,
             repo_root=repo,
             patches=[
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,4 +1,7 @@\n <main>\n   <section class=\"hero\"></section>\n+  <section class=\"banner\">live</section>\n   <section class=\"proof\"></section>\n </main>\n",
+                    "patch": '@@ -1,4 +1,7 @@\n <main>\n   <section class="hero"></section>\n+  <section class="banner">live</section>\n   <section class="proof"></section>\n </main>\n',
                 },
                 {
                     "path": "index.html",
-                    "patch": "@@ -1,4 +1,7 @@\n <main>\n   <section class=\"hero\"></section>\n   <section class=\"proof\"></section>\n+  <section class=\"capabilities\"></section>\n </main>\n",
+                    "patch": '@@ -1,4 +1,7 @@\n <main>\n   <section class="hero"></section>\n   <section class="proof"></section>\n+  <section class="capabilities"></section>\n </main>\n',
                 },
             ],
         )

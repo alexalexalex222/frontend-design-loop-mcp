@@ -2,74 +2,224 @@
 
 <!-- mcp-name: io.github.alexalexalex222/frontend-design-loop-mcp -->
 
-Coding agents can get a page functional. Frontend Design Loop makes it materially better with screenshot-grounded iteration and proof artifacts.
+Give your coding agent local previews, responsive images, focused browser checks,
+and evidence it can inspect while improving a frontend. Works with any MCP client
+that supports local stdio servers. Python 3.10+; Windows, macOS, and Linux.
 
-Use it when the base model got the page working but the result is still generic, flat, rough, or visibly under-designed. The main design workflow stays on one main provider and model lane by default, so multi-model routing is opt-in instead of the default story.
+## Quick start: host-agent toolkit
 
-## Quick Start
+These instructions describe the **local upgrade**, which has not been published.
+From this checkout, create a project environment and install:
 
-Install the current public build from PyPI:
-
-```bash
-pipx install frontend-design-loop-mcp
+```sh
+python -m venv .venv
 ```
 
-Set up every detected supported client:
+On macOS/Linux:
 
-```bash
-frontend-design-loop-setup --install-all-detected-clients
+```sh
+.venv/bin/python -m pip install -e .
+.venv/bin/frontend-design-loop-setup
+.venv/bin/frontend-design-loop-setup --print-config
 ```
 
-Real MCP call example:
+On Windows PowerShell:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -e .
+.venv\Scripts\frontend-design-loop-setup.exe
+.venv\Scripts\frontend-design-loop-setup.exe --print-config
+```
+
+Use `python3` or `py -3` for environment creation if that is your Python launcher.
+Setup downloads Playwright Chromium into this Python environment. It prints next
+steps and leaves MCP client settings alone. Linux may need system browser libraries;
+see [troubleshooting](docs/TROUBLESHOOTING.md).
+
+Copy the printed JSON into your client's MCP configuration. For client-specific
+formats, use `--print-codex-config`, `--print-claude-config`, or
+`--print-opencode-config`. The generated config binds to the current environment's
+absolute Python path, so it also works when a desktop client has a different PATH.
+Keep that environment in place. Restart the client after adding the config.
+
+Only explicit `--install-*` flags write client settings. Existing flags for Claude,
+Codex, Gemini, Droid, OpenCode, and `--install-all-detected-clients` remain available.
+File installers preserve unrelated settings, refuse conflicting unmanaged entries,
+validate the result, and replace it atomically. OpenCode JSONC is parsed and written
+as JSON, preserving values but removing comments and formatting.
+
+## Toolkit or automated server
+
+| Workflow | Entrypoint | Who edits and reviews? |
+| --- | --- | --- |
+| Host-agent toolkit (default) | `frontend-design-toolkit-mcp` | Your host agent uses its own tools and image capability |
+| Automated loop (explicit) | `frontend-design-loop-mcp` | Configured providers generate/refine and optionally judge |
+
+The toolkit needs **no model, CLI subscription, or API credentials**. Your host
+agent supplies the intelligence. It exposes `get_playbook`, `build_context`,
+`run_gates`, `preview_start`, `capture_screenshots`, and `preview_stop`.
+An explicit optional `review_design` call uses a separately selected native CLI judge;
+the mechanical toolkit itself invokes no model.
+
+Give the host a concrete brief, for example:
+
+> Improve this homepage for first-time customers booking a repair. Preserve verified
+> copy and the booking flow. Read the solve playbook, capture the baseline at desktop
+> and mobile widths, make the edits, test the menu and booking entry, and show the
+> resulting images and checks. Preserve the best source state while iterating.
+
+Mechanical calls look like:
 
 ```text
-frontend_design_loop_design(
-  repo_path="/absolute/path/to/site",
-  goal="make the homepage look materially more premium without changing the information architecture",
-  provider="gemini_cli",
-  model="gemini-3.1-pro-preview",
-  preview_command="python3 -m http.server {port}",
-  preview_url="http://127.0.0.1:{port}/index.html"
-)
+get_playbook(name="solve")
+preview_start(command=["python", "-m", "http.server", "{port}", "--bind", "127.0.0.1"], cwd="/absolute/path/to/site")
+capture_screenshots(url="<returned local URL>", evidence_label="baseline")
+run_gates(repo_path="/absolute/path/to/site", test_command=["npm", "test"])
+preview_stop(pid=<returned owned PID>)
 ```
 
-## Agent-Owned Toolkit Variant
+Use the project's actual interpreter/preview command; argv arrays avoid Windows
+path quoting problems. Test and lint absence is **skipped**, with `*_ok=null`.
+Read the [workflow reference](docs/FRONTEND_DESIGN_LOOP_MCP.md) for interaction steps,
+evidence manifests, and copyable client config examples.
 
-This repo now also ships an additive MCP entrypoint for agent-owned frontend loops:
+For the automated loop, add `--workflow automated` to any setup print/install flag:
 
-- console script: `frontend-design-toolkit-mcp`
-- module fallback: `PYTHONPATH=src .venv/bin/python -m design_toolkit.server`
+```sh
+frontend-design-loop-setup --workflow automated --print-codex-config
+```
 
-That variant is intentionally narrow:
-- `get_playbook`
-- `build_context`
-- `run_gates`
-- `preview_start`
-- `capture_screenshots`
-- `preview_stop`
+Select provider, model, effort, and authentication policy explicitly in the tool
+call/configuration using settings supported by your installed CLI. Native CLI flow
+uses an existing CLI login; no API key is required for a supported native route.
+Setup never changes login state or your default provider/model. Cloud adapters
+remain optional: install `.[cloud]` locally (or `frontend-design-loop-mcp[cloud]`
+after this upgrade is released). The automated server offers
+`frontend_design_loop_design`, `frontend_design_loop_eval`, and
+`frontend_design_loop_solve`; inspect their tool schemas for current options.
 
-It does not hide vision scoring, creativity judging, or patch generation behind MCP. The host agent owns planning, edits, screenshot review, scoring, iteration, and winner selection directly.
+A native automated call can use different models for editing and review:
 
-See [test-prompt-codex.md](test-prompt-codex.md) for the end-to-end Codex exercise prompt.
+```json
+{
+  "repo_path": "/absolute/path/to/site",
+  "goal": "Improve the booking page for first-time customers while preserving its working submission flow.",
+  "provider": "codex_cli",
+  "model": "gpt-6.1-sol",
+  "builder_effort": "high",
+  "vision_provider": "claude_cli",
+  "vision_model": "claude-opus-5-5",
+  "judge_effort": "high",
+  "auth_mode": "subscription",
+  "preview_command": ["npm", "run", "dev", "--", "--port", "{port}"],
+  "preview_url": "http://127.0.0.1:{port}",
+  "worktree_setup_command": ["npm", "ci", "--ignore-scripts"],
+  "design_scope": "refine"
+}
+```
 
-## What The MCP Does
+Pass that payload to `frontend_design_loop_design`. Choose model identifiers and
+exact effort levels advertised by your installed CLI and available to your account;
+these examples are not an entitlement guarantee. Configure `refiner_provider`,
+`refiner_model`, and `refiner_effort` independently when needed. No hidden model or
+provider fallback occurs. Subscription mode supports native Codex, first-party
+Claude Code, and verified native OpenAI OAuth routes in OpenCode. API or other CLI
+adapters require explicit `auth_mode="configured"` and optional dependencies.
 
-`frontend_design_loop_design` is the main workflow:
-- the host agent points the MCP at a real repo plus a concrete design goal
-- the MCP boots a local preview, captures screenshots, and iterates against the rendered result
-- the same main provider and model lane is used by default across planning, generation, and vision unless you explicitly override it
-- the MCP returns the winning patch plus screenshots and run artifacts
+Automation edits directly in disposable Git worktrees by default. Set
+`editing_mode="patch"` for structured patches, supplying `context_files` or automatic
+context selection. It snapshots retained dirty working contents without changing your
+index, captures a comparable baseline, and verifies that delivered changes reproduce
+the chosen candidate. `worktree_setup_command` installs dependencies inside each
+isolated worktree; use the project's actual command. Optional `worktree_reuse_dirs`
+shares directories through symlinks and is an explicit tradeoff rather than a default.
+Ignored files, generated untracked outputs, and sensitive untracked names are excluded
+and recorded. Ignored environment files are not copied into worktrees. Secrets
+embedded in ordinary source are outside this name-based policy.
 
-`frontend_design_loop_eval` is the proof workflow:
-- use it when the host agent already has the patch
-- the MCP applies the patch in an isolated worktree, runs deterministic checks, captures screenshots, and returns proof artifacts
+For clients with short call deadlines, use `frontend_design_loop_start` with
+`repo_path`, `goal`, and a `settings` object containing the design options above
+(excluding repo_path/goal), then poll `frontend_design_loop_status` or cancel with
+`frontend_design_loop_cancel`. Jobs last for the running server's lifetime.
+Native execution records distinguish requested settings, runtime observations, and
+unsupported controls. An effective model/effort remains unknown when the CLI does
+not provide a receipt; native temperature/token caps are not pretended to work.
 
-This is the wedge:
-- coding agents can already get pages working
-- this MCP helps them make pages materially better
-- screenshot-grounded iteration plus proof artifacts is the differentiator
+The optional toolkit reviewer takes the `manifest_path` returned by capture:
 
-Official MCP Registry metadata is tracked in [`server.json`](server.json).
+```text
+review_design(manifest_path="<candidate manifest>", baseline_manifest_path="<baseline manifest>",
+              goal="<audience and task>", provider="claude_cli", model="claude-opus-5-5", effort="high")
+```
+
+It verifies image hashes and labels before review. Claude's judge must show successful
+native reads of every supplied screenshot. The judge does not receive the passing
+threshold in its prompt. Missing or malformed evidence stays uncertain/error; a
+code diff cannot certify rendered UI quality. Already passing designs skip polish,
+and unsuccessful or regressing refinements restore the better inspected state.
+
+## Evidence and limits
+
+Each toolkit capture gets a fresh directory containing PNGs and `manifest.json`.
+Images are returned as MCP image content, subject to a bounded return size. Clients
+must support image blocks and the host model must actually inspect them. Manifests
+label viewport/state, image hashes, requested interactions, console errors,
+horizontal overflow, and passed/failed/not_run/error results. A caller-supplied
+source revision is a label; the toolkit does not verify a source snapshot.
+
+Screenshots do not prove quality, human preference, accessibility, factual accuracy,
+or successful untested flows. A high self-score is not independent review. Use a
+separate authorized reviewer when useful, preserve baseline and best source states,
+and tie acceptance to the audience's task and the requested scope. The gallery below
+is illustrative historical work, not a controlled benchmark of this upgrade.
+
+Toolkit previews are owned process trees with drained bounded logs. Unknown PIDs
+are rejected. Preview/screenshot document URLs must stay on the requested loopback
+origin; remote image/font/script assets may load. Commands and those assets run
+with local user privileges; origin checks are not an execution sandbox. Context
+packing excludes common credential files and redacts familiar secret patterns;
+inspect sensitive projects before sharing evidence.
+
+## Verify your installation
+
+```sh
+frontend-design-loop-setup --check
+frontend-design-loop-setup --doctor
+frontend-design-loop-setup --doctor --smoke
+frontend-design-loop-setup --auth-check
+```
+
+Doctor distinguishes CLI installation, unknown/authenticated/unauthenticated state,
+auth-probe execution, and **live inference not_run**. Auth probes are opt-in,
+bounded status commands; raw account output is not printed. Authentication does
+not prove model entitlement, native billing route, or inference success. Native
+CLIs are optional for the toolkit. Toolkit stdio smoke works from the installed
+package and invokes no model; automated render smoke is a checkout developer check.
+
+### Windows launch troubleshooting
+
+Use Git on `PATH` and install Playwright Chromium in the same Python environment as the server.
+If a `uv` launcher reports `uv trampoline failed to canonicalize script path` outside a
+sandboxed desktop profile, launch the server with that environment's Python instead:
+
+```text
+<venv>\Scripts\python.exe -m frontend_design_loop_mcp.mcp_server
+```
+
+The prepared `portability` CI job runs the complete suite on Windows Server 2022
+and 2025, macOS, and Linux with Python 3.10, 3.12, and 3.14. A Windows 11 ARM host
+also exercises x64 Python/Node under emulation; native ARM64 application support
+is not established. Native Windows tests exercise Job Object ownership, inherited
+stdio, descendant cleanup, timeout/cancellation, command quoting, and physical
+source replay.
+
+Each platform builds distributions and checks fresh pip wheel and `uv tool` source
+installs outside the checkout. Those checks run both MCP servers, an actual `npm`
+preview, desktop/mobile form interactions, screenshot hashes, and port release.
+They invoke no model and preserve JSON receipts, test results, logs, and images.
+Hosted execution of this local upgrade is still pending; configured checks do not
+establish a passing Windows release. See [Windows verification](docs/WINDOWS_VERIFICATION.md).
+
 
 ## Proof Gallery
 
@@ -101,171 +251,25 @@ Before: early ACA full homepage.
 
 ![ACA full-page before](docs/images/aca-site50-v9-fullpage-before.png)
 
-After: rebuilt ACA homepage with a stronger hero, cleaner sequencing, and a materially better full-page result.
+After: later ACA homepage revision, shown for visual comparison.
 
 ![ACA full-page after](docs/images/aca-site50-v22-fullpage-after.png)
 
 See the proof notes in [the case studies index](docs/case-studies/index.md).
 
-## How It Works In Practice
 
-1. Point the MCP at a real repo and give it a concrete design goal.
-2. It creates an isolated worktree, boots a preview, and captures rendered screenshots.
-3. It iterates against the actual rendered page instead of only raw code.
-4. It returns the winning patch, screenshot proof, and run artifacts so the host agent can judge the result.
+## Documentation
 
-## Workflow Summary
+- [Workflow and client configs](docs/FRONTEND_DESIGN_LOOP_MCP.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Historical case studies](docs/case-studies/index.md)
+- [Release checklist](docs/LAUNCH_CHECKLIST.md)
 
-### `frontend_design_loop_design`
+Client formats are based on [Codex MCP documentation](https://developers.openai.com/codex/mcp),
+[Claude Code MCP documentation](https://code.claude.com/docs/en/mcp), and
+[OpenCode MCP documentation](https://opencode.ai/docs/mcp-servers/).
 
-Use it when:
-- the page is functional but weak
-- the section structure is there but the design is not
-- you want the MCP to improve the page instead of only judging it
-
-Key defaults:
-- one main `provider` + `model` lane by default
-- `planning_mode="single"`
-- `vision_mode="on"`
-- `section_creativity_mode="on"`
-- split planner or vision lanes only happen when explicitly requested
-
-### `frontend_design_loop_eval`
-
-Use it when:
-- the host agent already has the patch
-- you want deterministic checks, screenshots, and artifact capture
-- you want the host agent to judge the result from returned screenshots
-
-Returned proof fields include:
-- `deterministic_passed`
-- `vision_pending`
-- `vision_scored`
-- `final_pass`
-- `run_dir`
-- `candidate_dir`
-- `screenshot_files`
-- `patch`
-
-### `frontend_design_loop_solve`
-
-`frontend_design_loop_solve` still exists for advanced unattended workflows, but it is not the main public story.
-
-## Install And Setup
-
-### Public install now
-
-```bash
-pipx install frontend-design-loop-mcp
-frontend-design-loop-setup --install-all-detected-clients
-```
-
-GitHub install remains the fallback:
-
-```bash
-pipx install git+https://github.com/alexalexalex222/frontend-design-loop-mcp.git
-frontend-design-loop-setup --install-all-detected-clients
-```
-
-### Local clone path
-
-```bash
-git clone https://github.com/alexalexalex222/frontend-design-loop-mcp.git
-cd frontend-design-loop-mcp
-./scripts/setup.sh
-```
-
-The local setup path:
-- creates `.venv`
-- installs the package
-- installs Playwright Chromium
-- installs detected client entries when supported clients are present
-- runs the built-in doctor
-- runs the stdio smoke test
-
-If you want the repo-local environment without auto-installing client entries:
-
-```bash
-FDL_SKIP_CLIENT_INSTALL=1 ./scripts/setup.sh
-```
-
-### Setup helpers
-
-Bulk installer:
-
-```bash
-frontend-design-loop-setup --install-all-detected-clients
-```
-
-Targeted installers:
-
-```bash
-frontend-design-loop-setup --install-claude --scope user
-frontend-design-loop-setup --install-codex
-frontend-design-loop-setup --install-gemini
-frontend-design-loop-setup --install-droid
-frontend-design-loop-setup --install-opencode
-```
-
-Config printers:
-
-```bash
-frontend-design-loop-setup --print-claude-config
-frontend-design-loop-setup --print-codex-config
-frontend-design-loop-setup --print-gemini-config
-frontend-design-loop-setup --print-droid-config
-frontend-design-loop-setup --print-opencode-config
-```
-
-## Safety Defaults
-
-- custom commands are parsed as shell-free argv by default
-- shell syntax, substitutions, and inline interpreter execution like `bash -c`, `python -c`, and `node -e` require `unsafe_shell_commands=true`
-- `preview_url` must match the launched local preview origin and port by default
-- external preview fetches require `unsafe_external_preview=true`
-- preview readiness checks reject cross-origin redirects, and browser screenshots block cross-origin subresources by default
-- auto-context skips common secret-bearing paths such as `.env*`, `.git/`, `.aws/`, `.ssh/`, `.config/gcloud/`, `.docker/`, `.kube/`, token-named files, and service-account-style JSON
-- native CLI providers inherit a minimal allowlisted environment instead of the full host shell environment
-- shared worktree reuse directories are off by default
-
-Client-side vision is the default proof path for `frontend_design_loop_eval`, so the host agent can judge the screenshots without provider credentials.
-
-Proxy-only MiniMax vision lanes are explicitly treated as structural-only review:
-- `vision_review_mode="proxy_structural"`
-- they do not count as full automated visual scoring
-
-## Verification
-
-Offline preflight:
-
-```bash
-PYTHONPATH=src .venv/bin/python scripts/preflight_check.py
-```
-
-stdio smoke:
-
-```bash
-PYTHONPATH=src .venv/bin/python scripts/smoke_mcp_stdio.py
-```
-
-Built-in doctor:
-
-```bash
-frontend-design-loop-setup --doctor
-frontend-design-loop-setup --doctor --smoke
-```
-
-## Docs
-
-- [Workflow reference](docs/FRONTEND_DESIGN_LOOP_MCP.md)
-- [Launch checklist](docs/LAUNCH_CHECKLIST.md)
-- [Directory submission copy](docs/MCP_DIRECTORY_SUBMISSIONS.md)
-- [Case studies](docs/case-studies/index.md)
-
-## Distribution State
-
-Current public install path:
-
-```bash
-pipx install frontend-design-loop-mcp
-```
+PyPI remains the published installation channel (`pipx install frontend-design-loop-mcp`),
+but that command installs the published version, not these unreleased local changes.
+Registry metadata is tracked in [server.json](server.json); no publication is part
+of this upgrade.

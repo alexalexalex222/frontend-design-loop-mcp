@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 import shlex
@@ -18,33 +17,12 @@ async def run_command(
     timeout_ms: int = 120_000,
     env: dict[str, str] | None = None,
 ) -> tuple[int, str, str]:
-    """Run a shell command and return (return_code, stdout, stderr)."""
-    try:
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=str(cwd) if cwd else None,
-            env=env,
-        )
-        stdout_bytes, stderr_bytes = await asyncio.wait_for(
-            proc.communicate(),
-            timeout=timeout_ms / 1000.0,
-        )
-        return (
-            proc.returncode or 0,
-            (stdout_bytes or b"").decode("utf-8", errors="replace"),
-            (stderr_bytes or b"").decode("utf-8", errors="replace"),
-        )
-    except asyncio.TimeoutError:
-        try:
-            proc.kill()
-            await proc.wait()
-        except Exception:
-            pass
-        return -1, "", f"Command timed out after {timeout_ms}ms"
-    except Exception as exc:
-        return -1, "", str(exc)
+    """Compatibility wrapper over shared bounded shell execution."""
+    from frontend_design_loop_core.utils import run_command as shared_run
+
+    if env is not None:
+        raise ValueError("Use run_command_argv for explicit environments")
+    return await shared_run(cmd, cwd=cwd, timeout_ms=timeout_ms)
 
 
 def shlex_quote(s: str) -> str:
@@ -109,8 +87,8 @@ def read_text(path: Path, *, max_chars: int = 100_000) -> str:
     if not path.exists() or not path.is_file():
         return ""
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        return text[:max_chars] if len(text) > max_chars else text
+        with path.open(encoding="utf-8", errors="replace") as stream:
+            return stream.read(max(0, max_chars))
     except Exception:
         return ""
 

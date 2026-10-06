@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 
 from frontend_design_loop_mcp.runtime_paths import (
     get_asset_root,
@@ -14,7 +15,6 @@ from frontend_design_loop_mcp.runtime_paths import (
     get_default_prompts_path,
     get_default_template_path,
 )
-from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()

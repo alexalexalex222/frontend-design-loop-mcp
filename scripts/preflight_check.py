@@ -6,7 +6,6 @@ This intentionally validates the public Frontend Design Loop MCP product surface
 
 from __future__ import annotations
 
-import shutil
 import sys
 from pathlib import Path
 
@@ -24,6 +23,7 @@ def check(name: str, ok: bool, detail: str = "") -> bool:
 def main() -> None:
     ok = True
 
+    from frontend_design_loop_core.cli_paths import resolve_native_cli
     from frontend_design_loop_core.config import load_config
     from frontend_design_loop_mcp.runtime_paths import (
         get_default_config_path,
@@ -47,22 +47,16 @@ def main() -> None:
     ready, detail = _check_playwright_ready()
     ok &= check("playwright chromium ready", ready, detail)
 
-    native_bins = {
-        "codex": shutil.which("codex"),
-        "gemini": shutil.which("gemini"),
-        "kilo": shutil.which("kilo"),
-        "droid": shutil.which("droid"),
-        "opencode": shutil.which("opencode"),
-        "claude": shutil.which("claude"),
-    }
-    for name, path in native_bins.items():
-        check(f"native cli visible: {name}", bool(path), path or "not on PATH")
+    for name in ("codex", "claude", "opencode"):
+        path = resolve_native_cli(name)
+        installed = Path(path).is_file()
+        print(f"[INFO] optional native CLI {name}: " + (path if installed else "not installed"))
 
     if cfg is not None:
         check(
             "default MCP tooling mode is agent-first",
             True,
-            "Use frontend_design_loop_eval with vision_provider=client for interactive sessions.",
+            "Use frontend-design-toolkit-mcp for host-agent editing and review.",
         )
 
     if not ok:

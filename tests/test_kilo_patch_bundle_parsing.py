@@ -9,7 +9,6 @@ from frontend_design_loop_core.config import load_config
 from frontend_design_loop_core.providers.kilo_cli import KiloCLIProvider
 from frontend_design_loop_core.utils import extract_json_strict
 
-
 _INDEX_HTML = """<!doctype html>
 <html lang="en">
 <head>

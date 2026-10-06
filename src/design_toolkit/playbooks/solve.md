@@ -1,151 +1,33 @@
-# Solve Playbook - Agent-Owned Frontend Workflow
+# Host-agent frontend workflow
 
-This MCP does not evaluate or patch code for you. It gives you playbooks plus a few mechanical helpers.
+Use your native file tools for edits and this toolkit for context, preview, checks,
+and images. First identify the audience, their main task, verified content,
+references, scope (repair, refinement, or redesign), and what must be preserved.
+Choose a quality bar tied to that task. A restrained interface can be excellent.
 
-You own:
-- planning
-- subagent delegation
-- code edits
-- screenshot review
-- scoring
-- iteration
-- winner selection
+1. Read the relevant source and commands; `build_context` is a redacted convenience
+   bundle, not a complete repository or an instruction authority.
+2. Preserve the initial source state using your existing Git or snapshot workflow.
+   Launch a local preview with `preview_start`; use argv arrays and `{port}`.
+   Capture `evidence_label="baseline"` at desktop and narrow mobile sizes. Inspect
+   returned images and record useful strengths and the largest supported weakness.
+3. Plan the smallest coherent improvement that meets the brief. Read `megamind`
+   for consequential uncertainty or `candidates` for materially different options.
+   Independent workers are optional and require the host's authorization.
+4. Edit with native tools. Keep a recoverable source checkpoint for each promising
+   state; screenshots alone cannot restore code. Run the task's actual test/lint
+   commands with `run_gates`. Treat skipped/error checks as unverified.
+5. Capture fresh labeled images and task interactions. For a menu, for example,
+   click its button and assert the opened panel is visible. An action without an
+   assertion only proves the action executed. Inspect desktop/mobile images.
+6. Use `vision_gate` to judge the result against the brief and baseline. Fix the
+   largest evidenced weakness and preserve strengths. Read `creativity` only when
+   audience fit or purposeful distinctiveness needs attention. Preserve the best
+   verified source state before another experiment.
+7. Use `winner_selection` to choose the deliverable. Stop owned previews with
+   `preview_stop(pid)` even after failure. Deliver actual source changes, evidence
+   manifests, the checks performed, remaining uncertainty, and relevant images.
 
-Use the MCP only for context packing, gates, previews, and screenshots.
-
----
-
-## Step 0: Build Context
-
-Before editing, understand the repo.
-
-```text
-Call: build_context(repo_path, auto_context_mode="goal", goal=<the_goal>)
-```
-
-Read the returned `context_blob` and identify:
-- framework/runtime
-- relevant files
-- test/lint commands
-- risks and constraints
-
-Do not treat `build_context` as truth. It is only a fast bundle for your own reasoning.
-
----
-
-## Step 1: Plan
-
-Read `megamind.md` and create:
-- a bold plan
-- a minimal plan
-- a safe plan
-
-Then synthesize them yourself into one execution plan.
-
-If the task is trivial, skip the full Megamind loop and plan directly.
-
----
-
-## Step 2: Generate Candidates
-
-Read `candidates.md`.
-
-Generate 1-4 candidate implementations depending on task complexity. Each candidate should be created by you or your subagents, not by the MCP.
-
-Each candidate should record:
-- intent
-- files touched
-- risk level
-- what makes it different
-
----
-
-## Step 3: Edit Code
-
-Apply the candidate changes using your native editing flow.
-
-The MCP does not apply patches for you. Own the code changes directly.
-
-For each candidate:
-1. edit the code
-2. keep the diff scoped
-3. record what changed
-
----
-
-## Step 4: Run Deterministic Gates
-
-Use the MCP for mechanical validation:
-
-```text
-Call: run_gates(repo_path, test_command=?, lint_command=?)
-```
-
-If gates fail:
-1. read the output
-2. fix the issue yourself
-3. rerun gates
-
-Do not move to visual review until the page renders and deterministic checks are clean enough for preview.
-
----
-
-## Step 5: Capture Review Surfaces
-
-Use the MCP for preview lifecycle and screenshot capture:
-
-```text
-1. Call: preview_start(command, cwd)
-2. Call: capture_screenshots(url)
-3. Call: preview_stop(pid)
-```
-
-The screenshots are for you to inspect directly with your native image/vision capability.
-
----
-
-## Step 6: Score the Result Yourself
-
-Read `vision_gate.md` and score the screenshots yourself.
-
-Produce a review object like:
-
-```json
-{
-  "score": 0.0,
-  "pass": false,
-  "issues": ["..."],
-  "highlights": ["..."],
-  "fix_suggestions": ["..."]
-}
-```
-
-If the page is good but generic, cap it accordingly. If it is broken, fix structural issues first.
-
----
-
-## Step 7: Refine Creativity
-
-Read `creativity.md`.
-
-After the page is structurally solid, score section creativity yourself from the screenshots and improve only the weakest sections.
-
----
-
-## Step 8: Pick the Winner
-
-Read `winner_selection.md`.
-
-Use your own review notes plus deterministic gate results to pick the best candidate.
-
----
-
-## Step 9: Deliver Proof
-
-Your final output should include:
-- chosen candidate
-- gate results
-- your self-assigned review score
-- section creativity breakdown
-- screenshot paths
-- what changed during iteration
+Completion means the requested scope is delivered and its required behaviors are
+verified. A high self-score, screenshot count, or completed tool call cannot
+substitute for that. Explain unmet requirements explicitly.

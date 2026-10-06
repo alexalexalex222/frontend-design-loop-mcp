@@ -24,7 +24,16 @@ def test_candidate_failure_writes_error_and_traceback_files(tmp_path: Path, monk
     _git(repo, "init")
     _git(repo, "add", "hello.txt")
     subprocess.run(
-        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=test",
+            "commit",
+            "-m",
+            "init",
+        ],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -66,6 +75,11 @@ def test_candidate_failure_writes_error_and_traceback_files(tmp_path: Path, monk
 
     async def run():
         return await mcp_code_server.frontend_design_loop_solve(
+            context_files=["hello.txt", "index.html"],
+            auth_mode="configured",
+            capture_baseline=False,
+            model="fixture-model",
+            editing_mode="patch",
             repo_path=str(repo),
             goal="This should fail",
             planning_mode="off",

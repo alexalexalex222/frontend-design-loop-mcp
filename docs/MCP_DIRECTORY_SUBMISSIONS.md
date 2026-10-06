@@ -1,3 +1,8 @@
+> Historical submission copy. This local upgrade is unpublished. Review and update
+> these snippets against the final release before any separately authorized submission.
+> The recommended new workflow is the host-agent toolkit; explicit automated loop
+> remains available. See README.md for current local installation and limitations.
+
 # MCP Directory Submission Copy
 
 Use this file as the source of truth for listing `frontend-design-loop-mcp` on MCP directories.

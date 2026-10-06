@@ -40,7 +40,9 @@ class GeminiCLIProvider(NativeCLIProvider):
         kwargs: dict[str, Any],
         image_paths: list[Path] | None = None,
     ) -> str:
-        prompt = super()._build_prompt(messages, model=model, kwargs=kwargs, image_paths=image_paths)
+        prompt = super()._build_prompt(
+            messages, model=model, kwargs=kwargs, image_paths=image_paths
+        )
         if image_paths:
             refs = " ".join(f"@./{path.name}" for path in image_paths)
             prompt = (
