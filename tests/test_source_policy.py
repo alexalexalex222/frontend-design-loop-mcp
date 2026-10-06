@@ -25,7 +25,7 @@ def repo(tmp_path: Path) -> Path:
     root.mkdir()
     git(root, "init", "-q")
     (root / "app.tsx").write_bytes(b"export default 'original';\n")
-    (root / ".gitignore").write_text(".env.local\nignored-source/\n")
+    (root / ".gitignore").write_bytes(b".env.local\nignored-source/\n")
     commit(root)
     return root
 

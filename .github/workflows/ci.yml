@@ -60,7 +60,7 @@ jobs:
           architecture: ${{ runner.os == 'Windows' && 'x64' || '' }}
       - name: Install package
         run: |
-          python -m pip install '.[dev]' uv
+          python -m pip install '.[dev]' uv 'pytest-timeout>=2.4.0,<3'
       - name: Install Linux browser libraries
         if: runner.os == 'Linux'
         run: python -m playwright install-deps chromium
@@ -68,9 +68,9 @@ jobs:
         run: python -m playwright install chromium
       - name: Native Windows process ownership and stdio regressions
         if: runner.os == 'Windows'
-        run: python -m pytest -vv --import-mode=importlib -o faulthandler_timeout=60 tests/test_windows_jobs.py --junitxml=out/native-windows-tests.xml
+        run: python -m pytest -vv --import-mode=importlib --timeout=180 --timeout-method=thread -o faulthandler_timeout=60 tests/test_windows_jobs.py --junitxml=out/native-windows-tests.xml
       - name: Complete suite including native process ownership and source replay
-        run: python -m pytest -vv --import-mode=importlib -o faulthandler_timeout=60 --junitxml=out/portability-tests.xml ${{ runner.os == 'Windows' && '--ignore=tests/test_windows_jobs.py' || '' }}
+        run: python -m pytest -vv --import-mode=importlib --timeout=180 --timeout-method=thread -o faulthandler_timeout=60 --junitxml=out/portability-tests.xml ${{ runner.os == 'Windows' && '--ignore=tests/test_windows_jobs.py' || '' }}
       - name: Installed toolkit stdio smoke
         run: python scripts/smoke_toolkit_stdio.py
       - name: Real stdio and responsive preview smoke
