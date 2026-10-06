@@ -573,12 +573,22 @@ async def test_native_target_launch_error_raises_instead_of_becoming_exit_code(t
 async def test_native_host_reports_createprocess_failure(tmp_path):
     executable = tmp_path / "invalid-target.exe"
     executable.write_bytes(b"This is not a Windows executable.")
-    with pytest.raises(OSError, match="WinError 193"):
+    # Windows editions/architectures can report either an invalid image or an
+    # incompatible machine type. Compare with this host's direct CreateProcess.
+    with pytest.raises(OSError) as native:
+        subprocess.Popen(
+            [str(executable)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    with pytest.raises(type(native.value), match=rf"WinError {native.value.winerror}") as hosted:
         await utils.launch_process_argv(
             [str(executable)],
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )
+    assert hosted.value.errno == native.value.errno
 
 
 @native_windows
