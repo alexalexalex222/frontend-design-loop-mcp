@@ -179,6 +179,7 @@ def test_doctor_no_cli_is_optional_and_no_auth_or_inference(monkeypatch, capsys)
 )
 def test_auth_probes_classify_without_echoing_accounts(monkeypatch, cli, response, status):
     monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: setup_mod.sys.executable)
+    monkeypatch.setattr(setup_mod, "prepare_process_argv", lambda argv: list(argv))
     calls = []
     monkeypatch.setattr(
         setup_mod.subprocess, "run", lambda command, **kw: calls.append((command, kw)) or response
@@ -190,14 +191,21 @@ def test_auth_probes_classify_without_echoing_accounts(monkeypatch, cli, respons
     assert calls[0][1]["timeout"] == 10
 
 
-def test_auth_probe_unrecognized_output_stays_unknown(monkeypatch):
+@pytest.mark.parametrize(
+    "output,probe_status",
+    [("changed format", "error"), ('{"changed_format":true}', "performed")],
+)
+def test_auth_probe_unrecognized_output_stays_unknown(monkeypatch, output, probe_status):
     monkeypatch.setattr(setup_mod.shutil, "which", lambda name, **kwargs: setup_mod.sys.executable)
+    monkeypatch.setattr(setup_mod, "prepare_process_argv", lambda argv: list(argv))
     monkeypatch.setattr(
         setup_mod.subprocess,
         "run",
-        lambda *args, **kw: SimpleNamespace(returncode=0, stdout="changed format", stderr=""),
+        lambda *args, **kw: SimpleNamespace(returncode=0, stdout=output, stderr=""),
     )
-    assert setup_mod._native_auth_status("claude", probe=True)["authentication"] == "unknown"
+    result = setup_mod._native_auth_status("claude", probe=True)
+    assert result["authentication"] == "unknown"
+    assert result["auth_probe"] == probe_status
 
 
 def test_check_missing_chromium_fails(monkeypatch):

@@ -37,7 +37,7 @@ jobs:
 
   portability:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -70,6 +70,10 @@ jobs:
         if: runner.os == 'Windows'
         run: python -m pytest -vv --import-mode=importlib --timeout=180 --timeout-method=thread -o faulthandler_timeout=60 tests/test_windows_jobs.py --junitxml=out/native-windows-tests.xml
       - name: Complete suite including native process ownership and source replay
+        id: full_suite
+        # Collect independent package evidence even when a test fails. The
+        # terminal check below still requires the original test outcome.
+        continue-on-error: true
         run: python -m pytest -vv --import-mode=importlib --timeout=180 --timeout-method=thread -o faulthandler_timeout=60 --junitxml=out/portability-tests.xml ${{ runner.os == 'Windows' && '--ignore=tests/test_windows_jobs.py' || '' }}
       - name: Installed toolkit stdio smoke
         run: python scripts/smoke_toolkit_stdio.py
@@ -81,6 +85,9 @@ jobs:
         run: python scripts/verify_installed_package.py --artifact out/ci-distributions --out-dir out/ci-wheel
       - name: Clean uv tool sdist, npm preview, interactions and automated eval
         run: python scripts/verify_installed_package.py --artifact out/ci-distributions --distribution sdist --installer uv --out-dir out/ci-sdist
+      - name: Require full suite success
+        if: always() && steps.full_suite.outcome != 'success'
+        run: python -c "raise SystemExit('The full suite failed; see its test log and JUnit artifact.')"
       - name: Preserve native platform receipts and screenshots
         if: always()
         uses: actions/upload-artifact@v4
