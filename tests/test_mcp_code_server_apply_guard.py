@@ -118,7 +118,7 @@ def test_apply_to_repo_skips_when_winner_is_best_effort(tmp_path: Path, monkeypa
             max_fix_rounds=0,
             test_command=[sys.executable, "--version"],
             vision_mode="on",
-            preview_command="python3 -m http.server {port}",
+            preview_command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}"],
             preview_url="http://127.0.0.1:{port}/",
             preview_wait_timeout_s=10.0,
             section_creativity_mode="off",

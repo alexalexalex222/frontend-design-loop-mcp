@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import socket
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -85,7 +86,8 @@ def loopback_allowed():
 async def test_owned_preview_drains_chatty_output_and_stops(tmp_path, loopback_allowed):
     script = tmp_path / "serve.py"
     script.write_text(
-        'import sys\nfrom http.server import HTTPServer, SimpleHTTPRequestHandler\nprint("x" * 200000, flush=True)\nprint("y" * 200000, file=sys.stderr, flush=True)\nHTTPServer(("127.0.0.1", int(sys.argv[1])), SimpleHTTPRequestHandler).serve_forever()\n'
+        'import sys, runpy\nprint("x" * 200000, flush=True)\nprint("y" * 200000, file=sys.stderr, flush=True)\n'
+        f'runpy.run_path({str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py")!r}, run_name="__main__")\n'
     )
     result = await preview.preview_start(
         command=[sys.executable, str(script), "{port}"], cwd=tmp_path, wait_timeout_s=8
@@ -205,7 +207,7 @@ async def test_capture_does_not_mutate_input_styles_during_client_startup(tmp_pa
         setTimeout(() => { document.querySelector('#ready').hidden = false; }, 500);
       </script>""")
     started = await preview.preview_start(
-        command=[sys.executable, "-m", "http.server", "{port}", "--bind", "127.0.0.1"],
+        command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}", "--bind", "127.0.0.1"],
         cwd=tmp_path, wait_timeout_s=10,
     )
     try:

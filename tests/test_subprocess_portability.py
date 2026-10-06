@@ -142,7 +142,7 @@ async def test_real_preview_stops_and_releases_its_port(tmp_path):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
-    args = [sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"]
+    args = [sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), str(port), "--bind", "127.0.0.1"]
     async with utils.managed_process_argv(args, cwd=tmp_path) as proc:
         async with httpx.AsyncClient(timeout=0.3, trust_env=False) as client:
             for _ in range(30):

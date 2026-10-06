@@ -128,7 +128,7 @@ async def test_higher_scoring_native_refinement_with_blocker_restores_inspected_
         capture_baseline=False,
         auto_context_mode="off",
         test_command="git diff --check",
-        preview_command=f'"{sys.executable}" -m http.server {{port}} --bind 127.0.0.1',
+        preview_command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}", "--bind", "127.0.0.1"],
         preview_url="http://127.0.0.1:{port}/index.html",
         max_candidates=1,
         max_fix_rounds=0,
@@ -330,8 +330,7 @@ async def test_stdio_sigterm_stops_owned_preview(tmp_path):
                     "arguments": {
                         "command": [
                             sys.executable,
-                            "-m",
-                            "http.server",
+                            str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"),
                             "{port}",
                             "--bind",
                             "127.0.0.1",
@@ -407,7 +406,7 @@ async def test_ipv6_only_preview_returns_actual_ready_origin_and_stops(tmp_path)
         pytest.skip("IPv6 loopback unavailable")
     (tmp_path / "index.html").write_text("<!doctype html><title>IPv6 fixture</title>")
     result = await preview_start(
-        command=[sys.executable, "-m", "http.server", "{port}", "--bind", "::1"],
+        command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}", "--bind", "::1"],
         cwd=tmp_path,
         port=port,
         wait_timeout_s=5,

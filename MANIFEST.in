@@ -4,3 +4,4 @@ include scripts/verify_installed_package.py
 include scripts/smoke_mcp_stdio.py
 include scripts/smoke_toolkit_stdio.py
 include docs/WINDOWS_VERIFICATION.md
+include scripts/preview_fixture.py

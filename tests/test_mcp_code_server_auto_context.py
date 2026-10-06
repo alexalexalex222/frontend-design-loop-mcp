@@ -23,15 +23,14 @@ def test_auto_context_files_uses_rg_when_available(tmp_path: Path, monkeypatch) 
     (repo / "src").mkdir()
     (repo / "src" / "foo.py").write_text("def foo():\n    return 1\n", encoding="utf-8")
 
-    async def fake_run_command(cmd: str, cwd=None, timeout_ms=120000, capture_output=True):
-        if cmd.startswith("command -v rg"):
-            return 0, "/usr/bin/rg\n", ""
-        if cmd.startswith("rg -l"):
-            # Include a traversal path to ensure filtering works.
-            return 0, "src/foo.py\n../oops.py\n", ""
-        return 1, "", ""
+    async def fake_run_command(argv, **kwargs):
+        assert argv[:2] == ["rg", "-l"]
+        assert kwargs["cwd"] == repo
+        # Include a traversal path to ensure filtering works.
+        return 0, "src/foo.py\n../oops.py\n", ""
 
     monkeypatch.setattr(mcp_code_server.shutil, "which", lambda binary: f"/usr/bin/{binary}")
+    monkeypatch.setattr(mcp_code_server, "run_command_argv", fake_run_command)
 
     async def run():
         return await mcp_code_server._auto_context_files(
@@ -48,14 +47,13 @@ def test_auto_context_files_excludes_sensitive_secret_paths(tmp_path: Path, monk
     (repo / "src" / "foo.py").write_text("def foo():\n    return 1\n", encoding="utf-8")
     (repo / ".env").write_text("API_KEY=secret\n", encoding="utf-8")
 
-    async def fake_run_command(cmd: str, cwd=None, timeout_ms=120000, capture_output=True):
-        if cmd.startswith("command -v rg"):
-            return 0, "/usr/bin/rg\n", ""
-        if cmd.startswith("rg -l"):
-            return 0, ".env\nsrc/foo.py\n", ""
-        return 1, "", ""
+    async def fake_run_command(argv, **kwargs):
+        assert argv[:2] == ["rg", "-l"]
+        assert kwargs["cwd"] == repo
+        return 0, ".env\nsrc/foo.py\n", ""
 
     monkeypatch.setattr(mcp_code_server.shutil, "which", lambda binary: f"/usr/bin/{binary}")
+    monkeypatch.setattr(mcp_code_server, "run_command_argv", fake_run_command)
 
     async def run():
         return await mcp_code_server._auto_context_files(

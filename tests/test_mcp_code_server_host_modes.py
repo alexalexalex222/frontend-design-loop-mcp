@@ -128,7 +128,7 @@ def test_frontend_design_loop_design_wraps_solve_with_design_defaults(
         return await mcp_code_server.frontend_design_loop_design(
             repo_path=str(repo),
             goal="Push the design harder without breaking the build",
-            preview_command="python3 -m http.server {port}",
+            preview_command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}"],
             preview_url="http://127.0.0.1:{port}",
             provider="gemini_cli",
             model="gemini-3.1-pro-preview",
@@ -171,7 +171,7 @@ def test_frontend_design_loop_design_allows_explicit_split_overrides(
         return await mcp_code_server.frontend_design_loop_design(
             repo_path=str(repo),
             goal="Use a separate planner and separate vision lane on purpose",
-            preview_command="python3 -m http.server {port}",
+            preview_command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}"],
             preview_url="http://127.0.0.1:{port}",
             provider="gemini_cli",
             model="gemini-3.1-pro-preview",

@@ -39,9 +39,10 @@ results, logs, and screenshots, including evidence from failed attempts.
 ## Current evidence and remaining acceptance
 
 The checker has passed on macOS against clean pip wheel and `uv tool` source
-installs of the local 1.1.0 upgrade. Windows CI has been prepared but has not run.
-The published CI currently verifies older Linux-only code; those green runs do
-not verify these changes.
+installs of the 1.1.0 upgrade. Hosted checks now run on the
+[verification branch](https://github.com/alexalexalex222/frontend-design-loop-mcp/actions/workflows/ci.yml?query=branch%3Acodex%2Ffrontend-loop-1.1-windows).
+Use the result for the exact candidate commit; an older green run does not verify
+later changes. Failed attempts retain their platform receipts and diagnostics.
 
 Before declaring Windows support verified, run the prepared workflow against the
 exact candidate, fix observed failures, and retain passing native receipts.
@@ -51,5 +52,5 @@ permissions and cannot establish every desktop client's launch configuration,
 login flow, restrictive corporate policy, or antivirus behavior. Real model
 authentication/inference remains a separate opt-in check.
 
-This upgrade remains local and unpublished. No commit, push, desktop client
-configuration change, account change, or publication is implied by these checks.
+The upgrade is on the verification branch and has not been published as a package
+release. These checks do not activate a desktop client or change its accounts.

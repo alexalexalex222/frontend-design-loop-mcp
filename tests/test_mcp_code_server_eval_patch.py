@@ -375,7 +375,7 @@ def test_eval_patch_rejects_external_preview_url_by_default(tmp_path: Path) -> N
             test_command=[sys.executable, "--version"],
             vision_mode="on",
             vision_provider="client",
-            preview_command="python3 -m http.server {port}",
+            preview_command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}"],
             preview_url="http://example.com:{port}/",
         )
 
@@ -414,7 +414,7 @@ def test_eval_patch_rejects_mismatched_local_preview_port_by_default(tmp_path: P
             test_command=[sys.executable, "--version"],
             vision_mode="on",
             vision_provider="client",
-            preview_command="python3 -m http.server {port}",
+            preview_command=[sys.executable, str(Path(__file__).resolve().parents[1] / "scripts" / "preview_fixture.py"), "{port}"],
             preview_url="http://127.0.0.1:9999/",
         )
 

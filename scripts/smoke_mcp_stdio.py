@@ -100,7 +100,7 @@ async def _run(*, preview: bool = False, installed: bool = False) -> None:
             preview_options = {}
             if preview:
                 preview_options = {
-                    "preview_command": [sys.executable, "-m", "http.server", "{port}", "--bind", "127.0.0.1"],
+                    "preview_command": [sys.executable, str(Path(__file__).with_name("preview_fixture.py")), "{port}", "--bind", "127.0.0.1"],
                     "preview_url": "http://127.0.0.1:{port}/index.html",
                     "vision_mode": "on",
                     "viewports": [
